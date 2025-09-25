@@ -9,7 +9,6 @@ import warnings
 import gspread
 import plotly.express as px
 import json
-#import openai
 
 # --- Branding Header ---
 st.markdown("""
@@ -33,29 +32,19 @@ try:
 except FileNotFoundError:
     st.warning("Logo file not found.")
 
-    # --- Resume Upload ---
+# --- Resume Upload ---
 st.subheader("📤 Upload Your Resume")
 resume = st.file_uploader("Upload PDF Resume", type=["pdf"])
 parsed_skills = []
 
-# try:
-    # from pyresparser import ResumeParser
-    # warnings.filterwarnings("ignore", category=UserWarning)
-# except:
-    # ResumeParser = None
+# --- Simulated Resume Parser (lightweight fallback) ---
+if resume:
+    parsed_skills = ["Data Analysis", "SQL", "Python", "Power BI", "Machine Learning"]
+    st.success("Resume uploaded successfully!")
+    st.markdown("**🔍 Simulated Keywords from Resume:**")
+    st.markdown(", ".join(parsed_skills[:10]))
 
-if resume and ResumeParser:
-    with open("resume_temp.pdf", "wb") as f:
-        f.write(resume.read())
-    data = ResumeParser("resume_temp.pdf").get_extracted_data()
-    parsed_skills = data.get("skills", [])
-    st.success("Resume uploaded and parsed successfully!")
-    if parsed_skills:
-        st.markdown("**🔍 Suggested Keywords from Resume:**")
-        st.markdown(", ".join(parsed_skills[:10]))
-
-# --- OpenAI Bullet Rewriter ---
-# --- Simulated Bullet Rewriter (No OpenAI API) ---
+# --- Simulated Bullet Rewriter ---
 st.subheader("🧠 Rewrite Resume Bullet (Simulated)")
 bullet_input = st.text_area("Paste a resume bullet point to enhance")
 tone = st.selectbox("Choose tone", ["assertive", "formal", "friendly"])
@@ -68,7 +57,7 @@ if st.button("Simulate Rewrite"):
     else:
         st.warning("Please enter a bullet point to rewrite.")
 
-    # --- Google Sheets Setup ---
+# --- Google Sheets Setup ---
 creds = json.loads(st.secrets["google"]["service_account"])
 gc = gspread.service_account_from_dict(creds)
 sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit")
@@ -140,8 +129,11 @@ if st.button("🚀 Auto-Apply to All"):
             st.markdown(f"- {company}")
         st.text_area("📋 Copy Company List", value="\n".join(applied_companies), height=150)
 
+        # --- Recruiter Metrics ---
         st.markdown("### 📊 Recruiter-Facing Metrics")
+        st.markdown("**Top Cities:**")
         st.dataframe(top_locations)
+        st.markdown("**Most Applied Roles:**")
         st.dataframe(top_roles)
 
         role_counts = job_df["Job Title"].value_counts().reset_index()
@@ -165,7 +157,7 @@ if st.button("🚀 Auto-Apply to All"):
     else:
         st.error("Please upload your resume and search jobs first.")
 
-        # --- Drift Monitor ---
+# --- Drift Monitor ---
 st.subheader("📉 Drift Monitor (Job Title Frequency)")
 uploaded_old = st.file_uploader("Upload old job data CSV", key="old")
 uploaded_new = st.file_uploader("Upload new job data CSV", key="new")
