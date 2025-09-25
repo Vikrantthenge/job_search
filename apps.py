@@ -28,26 +28,18 @@ try:
             <img src='data:image/png;base64,{img_base64}' width='60'>
             <span style='font-size: 20px; font-weight: 600; color: #8B0000;'>Built for Data. Ready for Impact.</span>
         </div>
-        st.markdown("""
-    <div style='text-align: center; font-size: 24px; font-weight: bold; color: #8B0000; margin-bottom: 20px;'>
-        st.markdown("""
-    <div style='text-align: center; font-size: 24px; font-weight: bold; color: #8B0000; margin-bottom: 20px;'>
-        🧭 <span style='color:#333;'>Job Bot</span> – <span style='color:#8B0000;'>Auto Apply + Resume Enhancer + Drift Monitor</span>
-    </div>
-""", unsafe_allow_html=True)
     """, unsafe_allow_html=True)
 except FileNotFoundError:
     st.warning("Logo file not found.")
-    
 
 # --- Resume Upload ---
 st.subheader("📤 Upload Your Resume")
 resume = st.file_uploader("Upload PDF Resume", type=["pdf"])
 parsed_skills = []
 
-# --- Simulated Resume Parser ---
+# --- Simulated Resume Parser (lightweight fallback) ---
 if resume:
-    parsed_skills = ["Python", "SQL", "Power BI", "Data Analysis", "Machine Learning"]
+    parsed_skills = ["Data Analysis", "SQL", "Python", "Power BI", "Machine Learning"]
     st.success("Resume uploaded successfully!")
     st.markdown("**🔍 Simulated Keywords from Resume:**")
     st.markdown(", ".join(parsed_skills[:10]))
@@ -185,6 +177,6 @@ if uploaded_old and uploaded_new:
 st.markdown("""
     <hr style='margin-top: 40px;'>
     <div style='text-align: center; font-size: 14px; color: gray;'>
-        &#8226; Built with ❤️ using Streamlit &#8226; Resume parsing enabled &#8226; OpenAI-powered rewriting &#8226; Google Sheets logging active &#8226; Recruiter metrics visualized &#8226; Drift monitoring integrated &#8226;
+        · Built with ❤️ using Streamlit · Resume parsing enabled · OpenAI-powered rewriting · Google Sheets logging active · Recruiter metrics visualized · Drift monitoring integrated ·
     </div>
-    )""", unsafe_allow_html=True)
+""", unsafe_allow_html=True)
