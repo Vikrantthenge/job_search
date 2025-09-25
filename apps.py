@@ -30,6 +30,8 @@ try:
         </div>
         st.markdown("""
     <div style='text-align: center; font-size: 24px; font-weight: bold; color: #8B0000; margin-bottom: 20px;'>
+        st.markdown("""
+    <div style='text-align: center; font-size: 24px; font-weight: bold; color: #8B0000; margin-bottom: 20px;'>
         🧭 <span style='color:#333;'>Job Bot</span> – <span style='color:#8B0000;'>Auto Apply + Resume Enhancer + Drift Monitor</span>
     </div>
 """, unsafe_allow_html=True)
