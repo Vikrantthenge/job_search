@@ -59,7 +59,7 @@ if st.button("Simulate Rewrite"):
 # --- Google Sheets Setup ---
 creds = json.loads(st.secrets["google"]["service_account"])
 gc = gspread.service_account_from_dict(creds)
-sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit?gid=909019118#gid=909019118")
+sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit")
 worksheet = sh.sheet1
 
 # --- Sidebar Filters ---
