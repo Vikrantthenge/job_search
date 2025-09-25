@@ -10,24 +10,34 @@ import gspread
 import plotly.express as px
 import json
 
-# --- Logo + Branding Header (Compact Layout) ---
-try:
-    logo = Image.open("vt_logo.png")  # Replace with your actual logo filename
-    buffered = BytesIO()
-    logo.save(buffered, format="PNG")
-    img_base64 = base64.b64encode(buffered.getvalue()).decode()
+# --- Logo + Branding Header ---
 
-    st.markdown(f"""
-        <div style='text-align: center; margin: 0px; padding: 0px;'>
-            <img src='data:image/png;base64,{img_base64}' width='360' style='margin-bottom: -10px;'>
-        </div>
-        <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000; margin-top: -5px; margin-bottom: 10px;'>
-            🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
-        </div>
-    """, unsafe_allow_html=True)
+col_logo, col_filters = st.columns([2, 1])  # Wider space for branding
 
-except FileNotFoundError:
-    st.warning("Logo file not found.")
+with col_logo:
+    try:
+        logo = Image.open("vt_logo.png")
+        buffered = BytesIO()
+        logo.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+
+        st.markdown(f"""
+            <div style='text-align: left; margin: 0px; padding: 0px;'>
+                <img src='data:image/png;base64,{img_base64}' width='360' style='margin-bottom: -10px;'>
+            </div>
+            <div style='text-align: left; font-size: 22px; font-weight: bold; color: #8B0000; margin-top: -5px; margin-bottom: 10px;'>
+                🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
+            </div>
+        """, unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.warning("Logo file not found.")
+
+with col_filters:
+    st.sidebar.header("🎯 Job Search Filters")
+    default_keywords = parsed_skills[0] if parsed_skills else "Data Analyst"
+    keywords = st.sidebar.text_input("Job Title", value=default_keywords)
+    location = st.sidebar.text_input("Location", value="India")
+    num_pages = st.sidebar.slider("Pages to Search", 1, 5, 1)
 
 
 # --- Resume Upload ---
