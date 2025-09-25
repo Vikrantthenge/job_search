@@ -12,7 +12,7 @@ import json
 
 # --- Logo ---
 try:
-    logo = Image.open("your_logo.png")
+    logo = Image.open("vt_logo.png")
     buffered = BytesIO()
     logo.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
