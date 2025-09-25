@@ -111,12 +111,8 @@ if st.button("🚀 Auto-Apply to All"):
         top_locations = job_df["Location"].value_counts().head(5)
         top_roles = job_df["Job Title"].value_counts().head(5)
 
-        from datetime import datetime
-        import pytz
-
-# --- IST Timestamp ---
-         ist = pytz.timezone("Asia/Kolkata")
-         timestamp = datetime.now(ist).strftime("%d-%b-%Y %I:%M %p")
+        timestamp = datetime.now().strftime("%d-%b-%Y %I:%M %p")
+        
         log_df = pd.DataFrame({
             "Company": applied_companies,
             "Applied On": [timestamp] * len(applied_companies),
@@ -133,7 +129,6 @@ if st.button("🚀 Auto-Apply to All"):
         for company in applied_companies:
             st.markdown(f"- {company}")
         st.text_area("📋 Copy Company List", value="\n".join(applied_companies), height=150)
-
         
 
         # --- Recruiter Metrics ---
