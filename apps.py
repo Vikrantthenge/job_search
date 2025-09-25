@@ -10,27 +10,27 @@ import gspread
 import plotly.express as px
 import json
 
-# --- Logo ---
+# --- Logo + Branding Header (Compact Layout) ---
 try:
     logo = Image.open("vt_logo.png")
     buffered = BytesIO()
     logo.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
+
     st.markdown(f"""
-        <div style='display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;'>
-            <img src='data:image/png;base64,{img_base64}' width='400'>
-            <span style='font-size: 20px; font-weight: 600; color: #8B0000;'></span>
+        <div style='text-align: center; margin: 10px 0;'>
+            <img src='data:image/png;base64,{img_base64}' width='120'>
+        </div>
+        <div style='text-align: center; font-size: 16px; font-weight: 500; color: #8B0000; margin: 0;'>
+            Built for Data. Ready for Impact.
+        </div>
+        <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000; margin: 8px 0 20px 0;'>
+            🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
         </div>
     """, unsafe_allow_html=True)
+
 except FileNotFoundError:
     st.warning("Logo file not found.")
-
-# --- Branding Header ---
-st.markdown("""
-    <div style='text-align: center; font-size: 24px; font-weight: bold; color: #8B0000; margin-bottom: 20px;'>
-        <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
-    </div>
-""", unsafe_allow_html=True)
 
 
 # --- Resume Upload ---
