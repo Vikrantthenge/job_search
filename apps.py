@@ -49,9 +49,10 @@ tone = st.selectbox("Choose tone", ["assertive", "formal", "friendly"])
 
 if st.button("Simulate Rewrite"):
     if bullet_input:
-        simulated = f"[{tone.capitalize()} tone] {bullet_input} — rewritten for recruiter impact."
+        # Simulated enhancement logic
+        rewritten = f"• Spearheaded demand forecasting models, driving a 12% profitability surge — {tone.capitalize()} delivery for recruiter impact."
         st.markdown("**🔁 Simulated Rewritten Bullet:**")
-        st.success(simulated)
+        st.success(rewritten)
     else:
         st.warning("Please enter a bullet point to rewrite.")
 
