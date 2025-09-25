@@ -55,20 +55,18 @@ if resume and ResumeParser:
         st.markdown(", ".join(parsed_skills[:10]))
 
 # --- OpenAI Bullet Rewriter ---
-st.subheader("🧠 Rewrite Resume Bullet with OpenAI")
+# --- Simulated Bullet Rewriter (No OpenAI API) ---
+st.subheader("🧠 Rewrite Resume Bullet (Simulated)")
 bullet_input = st.text_area("Paste a resume bullet point to enhance")
 tone = st.selectbox("Choose tone", ["assertive", "formal", "friendly"])
 
-if st.button("Rewrite with GPT"):
-    openai.api_key = st.secrets["openai"]["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"]
-    prompt = f"Rewrite this resume bullet in a {tone} tone:\n\n{bullet_input}"
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    rewritten = response.choices[0].message.content.strip()
-    st.markdown("**🔁 Rewritten Bullet:**")
-    st.success(rewritten)
+if st.button("Simulate Rewrite"):
+    if bullet_input:
+        simulated = f"[{tone.capitalize()} tone] {bullet_input} — rewritten for recruiter impact."
+        st.markdown("**🔁 Simulated Rewritten Bullet:**")
+        st.success(simulated)
+    else:
+        st.warning("Please enter a bullet point to rewrite.")
 
     # --- Google Sheets Setup ---
 creds = json.loads(st.secrets["google"]["service_account"])
