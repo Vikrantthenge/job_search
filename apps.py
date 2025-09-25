@@ -11,14 +11,16 @@ import plotly.express as px
 import json
 
 # --- Stacked Logos ---
+try:
+    vt_logo = Image.open("vt_logo.png")
+    jobbot_logo = Image.open("vt_logo.png")
 
-jobbot_logo = Image.open("vt_logo.png")
-jobbot_buffer = BytesIO()
-jobbot_logo.save(jobbot_buffer, format="PNG")
-jobbot_base64 = base64.b64encode(jobbot_buffer.getvalue()).decode()
+    vt_buffer = BytesIO()
+    vt_logo.save(vt_buffer, format="PNG")
+    vt_base64 = base64.b64encode(vt_buffer.getvalue()).decode()
 
 
-st.markdown(f"""
+    st.markdown(f"""
         <div style='text-align: center; margin-top: 10px; margin-bottom: 10px;'>
             <img src='data:image/png;base64,{vt_base64}' width='80'><br>
             <img src='data:image/png;base64,{jobbot_base64}' width='160'>
@@ -27,9 +29,9 @@ st.markdown(f"""
             🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
         </div>
     """, unsafe_allow_html=True)
-#except FileNotFoundError:
 
-st.warning("One or both logo files not found.")
+except FileNotFoundError:
+    st.warning("One or both logo files not found.")
 
 # --- Branding Header ---
 st.markdown("""
