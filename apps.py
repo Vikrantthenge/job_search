@@ -12,7 +12,7 @@ import json
 
 # --- Logo + Branding Header (Compact Layout) ---
 try:
-    logo = Image.open("vt_logo.png")
+    logo = Image.open("vt_logo.png")  # Replace with your actual logo filename
     buffered = BytesIO()
     logo.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
@@ -20,9 +20,6 @@ try:
     st.markdown(f"""
         <div style='text-align: center; margin: 10px 0;'>
             <img src='data:image/png;base64,{img_base64}' width='120'>
-        </div>
-        <div style='text-align: center; font-size: 16px; font-weight: 500; color: #8B0000; margin: 0;'>
-            Built for Data. Ready for Impact.
         </div>
         <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000; margin: 8px 0 20px 0;'>
             🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
