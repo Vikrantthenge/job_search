@@ -1,4 +1,4 @@
-# 🔍 JobSearchMatch
+# 🔍 Job Search Match
 
 **Smart Resume-to-Job Matching App — Built for Recruiters, Job Seekers, and Career Strategists**
 
