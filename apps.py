@@ -111,7 +111,12 @@ if st.button("🚀 Auto-Apply to All"):
         top_locations = job_df["Location"].value_counts().head(5)
         top_roles = job_df["Job Title"].value_counts().head(5)
 
-        timestamp = datetime.now().strftime("%d-%b-%Y %I:%M %p")
+        from datetime import datetime
+        import pytz
+
+# --- IST Timestamp ---
+         ist = pytz.timezone("Asia/Kolkata")
+         timestamp = datetime.now(ist).strftime("%d-%b-%Y %I:%M %p")
         log_df = pd.DataFrame({
             "Company": applied_companies,
             "Applied On": [timestamp] * len(applied_companies),
