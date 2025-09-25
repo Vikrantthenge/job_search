@@ -1,0 +1,9 @@
+streamlit
+pandas
+requests
+openai
+gspread
+oauth2client
+plotly
+pyresparser
+numpy==1.26.4
