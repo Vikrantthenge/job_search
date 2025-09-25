@@ -13,15 +13,12 @@ import json
 # --- Stacked Logos ---
 try:
     vt_logo = Image.open("vt_logo.png")
-    jobbot_logo = Image.open("vt_logo.png")
+    jobbot_logo = Image.open("jobbot_badge.png")
 
     vt_buffer = BytesIO()
     vt_logo.save(vt_buffer, format="PNG")
     vt_base64 = base64.b64encode(vt_buffer.getvalue()).decode()
 
-    jobbot_buffer = BytesIO()
-    jobbot_logo.save(jobbot_buffer, format="PNG")
-    jobbot_base64 = base64.b64encode(jobbot_buffer.getvalue()).decode()
 
     st.markdown(f"""
         <div style='text-align: center; margin-top: 10px; margin-bottom: 10px;'>
