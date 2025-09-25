@@ -19,7 +19,7 @@ try:
 
     st.markdown(f"""
         <div style='text-align: center; margin: 10px 0;'>
-            <img src='data:image/png;base64,{img_base64}' width='120'>
+            <img src='data:image/png;base64,{img_base64}' width='360'>
         </div>
         <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000; margin: 8px 0 20px 0;'>
             🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
