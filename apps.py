@@ -37,9 +37,9 @@ st.subheader("📤 Upload Your Resume")
 resume = st.file_uploader("Upload PDF Resume", type=["pdf"])
 parsed_skills = []
 
-# --- Simulated Resume Parser (lightweight fallback) ---
+# --- Simulated Resume Parser ---
 if resume:
-    parsed_skills = ["Data Analysis", "SQL", "Python", "Power BI", "Machine Learning"]
+    parsed_skills = ["Python", "SQL", "Power BI", "Data Analysis", "Machine Learning"]
     st.success("Resume uploaded successfully!")
     st.markdown("**🔍 Simulated Keywords from Resume:**")
     st.markdown(", ".join(parsed_skills[:10]))
