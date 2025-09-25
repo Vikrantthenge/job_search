@@ -13,7 +13,7 @@ import json
 # --- Stacked Logos ---
 try:
     vt_logo = Image.open("vt_logo.png")
-    jobbot_logo = Image.open("jobbot_badge.png")
+    jobbot_logo = Image.open("vt_logo.png")
 
     vt_buffer = BytesIO()
     vt_logo.save(vt_buffer, format="PNG")
