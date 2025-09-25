@@ -18,10 +18,10 @@ try:
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
 
     st.markdown(f"""
-        <div style='text-align: center; margin: 10px 0;'>
-            <img src='data:image/png;base64,{img_base64}' width='360'>
+        <div style='text-align: center; margin: 0px; padding: 0px;'>
+            <img src='data:image/png;base64,{img_base64}' width='360' style='margin-bottom: -10px;'>
         </div>
-        <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000; margin: 8px 0 20px 0;'>
+        <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000; margin-top: -5px; margin-bottom: 10px;'>
             🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
         </div>
     """, unsafe_allow_html=True)
