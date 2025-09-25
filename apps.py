@@ -22,7 +22,7 @@ try:
 
     st.markdown(f"""
         <div style='text-align: center; margin-top: 10px; margin-bottom: 10px;'>
-            <img src='data:image/png;base64,{vt_base64}' width='80'><br>
+            <img src='data:image/png;base64,{img_base64}' width='160'>
             <img src='data:image/png;base64,{jobbot_base64}' width='160'>
         </div>
         <div style='text-align: center; font-size: 24px; font-weight: bold; color: #8B0000; margin-bottom: 20px;'>
