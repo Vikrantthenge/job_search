@@ -122,11 +122,14 @@ if st.button("🚀 Auto-Apply to All"):
         for row in log_df.values.tolist():
             worksheet.append_row(row)
         worksheet.update_acell('A1', f"Last synced: {timestamp}")
+        st.success("✅ Synced to Google Sheet successfully")
 
         st.markdown("### 🏢 Companies Applied To")
         for company in applied_companies:
             st.markdown(f"- {company}")
         st.text_area("📋 Copy Company List", value="\n".join(applied_companies), height=150)
+
+        
 
         # --- Recruiter Metrics ---
         st.markdown("### 📊 Recruiter-Facing Metrics")
