@@ -185,6 +185,6 @@ if uploaded_old and uploaded_new:
 st.markdown("""
     <hr style='margin-top: 40px;'>
     <div style='text-align: center; font-size: 14px; color: gray;'>
-        • Built with ❤️ using Streamlit • Resume parsing enabled • OpenAI-powered rewriting • Google Sheets logging active • Recruiter metrics visualized • Drift monitoring integrated •
+        &#8226; Built with ❤️ using Streamlit &#8226; Resume parsing enabled &#8226; OpenAI-powered rewriting &#8226; Google Sheets logging active &#8226; Recruiter metrics visualized &#8226; Drift monitoring integrated &#8226;
     </div>
 """, unsafe_allow_html=True)
