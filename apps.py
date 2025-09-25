@@ -155,21 +155,41 @@ if st.button("🚀 Auto-Apply to All"):
     else:
         st.error("Please upload your resume and search jobs first.")
 
-# --- Drift Monitor ---
-st.subheader("📉 Drift Monitor (Job Title Frequency)")
-uploaded_old = st.file_uploader("Upload old job data CSV", key="old")
-uploaded_new = st.file_uploader("Upload new job data CSV", key="new")
+# --- Drift Monitor (Polished) ---
+st.markdown("### 📉 Drift Monitor – Job Title Trends Over Time")
+st.markdown("Upload two job datasets to compare how demand has shifted across roles.")
+
+col1, col2 = st.columns(2)
+with col1:
+    uploaded_old = st.file_uploader("⬅️ Old Job Data CSV", type=["csv"], key="old")
+with col2:
+    uploaded_new = st.file_uploader("➡️ New Job Data CSV", type=["csv"], key="new")
 
 if uploaded_old and uploaded_new:
     df_old = pd.read_csv(uploaded_old)
     df_new = pd.read_csv(uploaded_new)
+
     old_freq = df_old["Job Title"].value_counts().head(10)
     new_freq = df_new["Job Title"].value_counts().head(10)
-    drift_df = pd.DataFrame({"Old": old_freq, "New": new_freq}).fillna(0)
-    st.markdown("**📊 Drift in Top Job Titles:**")
+
+    drift_df = pd.DataFrame({
+        "Old": old_freq,
+        "New": new_freq
+    }).fillna(0)
+
+    st.markdown("#### 🔍 Top 10 Job Titles – Frequency Comparison")
     st.dataframe(drift_df)
-    fig_drift = px.bar(drift_df, barmode="group", title="Job Title Drift Over Time")
-    st.plotly_chart(fig_drift)
+
+    fig_drift = px.bar(
+        drift_df,
+        barmode="group",
+        title="📊 Job Title Drift Over Time",
+        labels={"index": "Job Title", "value": "Frequency"},
+        color_discrete_sequence=["#8B0000", "#333333"]
+    )
+    st.plotly_chart(fig_drift, use_container_width=True)
+else:
+    st.info("Upload both CSVs to view drift analysis.")
 
 # --- Footer ---
 st.markdown("""
