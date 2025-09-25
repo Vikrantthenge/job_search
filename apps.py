@@ -187,4 +187,4 @@ st.markdown("""
     <div style='text-align: center; font-size: 14px; color: gray;'>
         &#8226; Built with ❤️ using Streamlit &#8226; Resume parsing enabled &#8226; OpenAI-powered rewriting &#8226; Google Sheets logging active &#8226; Recruiter metrics visualized &#8226; Drift monitoring integrated &#8226;
     </div>
-""", unsafe_allow_html=True)
+)""", unsafe_allow_html=True)
