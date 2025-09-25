@@ -9,7 +9,7 @@ import warnings
 import gspread
 import plotly.express as px
 import json
-import openai
+#import openai
 
 # --- Branding Header ---
 st.markdown("""
