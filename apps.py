@@ -38,11 +38,11 @@ st.subheader("📤 Upload Your Resume")
 resume = st.file_uploader("Upload PDF Resume", type=["pdf"])
 parsed_skills = []
 
-try:
-    from pyresparser import ResumeParser
-    warnings.filterwarnings("ignore", category=UserWarning)
-except:
-    ResumeParser = None
+# try:
+    # from pyresparser import ResumeParser
+    # warnings.filterwarnings("ignore", category=UserWarning)
+# except:
+    # ResumeParser = None
 
 if resume and ResumeParser:
     with open("resume_temp.pdf", "wb") as f:
