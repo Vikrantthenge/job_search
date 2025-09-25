@@ -10,13 +10,6 @@ import gspread
 import plotly.express as px
 import json
 
-# --- Branding Header ---
-st.markdown("""
-    <div style='text-align: center; font-size: 24px; font-weight: bold; color: #8B0000; margin-bottom: 20px;'>
-        <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
-    </div>
-""", unsafe_allow_html=True)
-
 # --- Logo ---
 try:
     logo = Image.open("your_logo.png")
@@ -31,6 +24,14 @@ try:
     """, unsafe_allow_html=True)
 except FileNotFoundError:
     st.warning("Logo file not found.")
+
+# --- Branding Header ---
+st.markdown("""
+    <div style='text-align: center; font-size: 24px; font-weight: bold; color: #8B0000; margin-bottom: 20px;'>
+        <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
+    </div>
+""", unsafe_allow_html=True)
+
 
 # --- Resume Upload ---
 st.subheader("📤 Upload Your Resume")
