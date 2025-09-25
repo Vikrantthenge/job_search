@@ -60,7 +60,7 @@ bullet_input = st.text_area("Paste a resume bullet point to enhance")
 tone = st.selectbox("Choose tone", ["assertive", "formal", "friendly"])
 
 if st.button("Rewrite with GPT"):
-    openai.api_key = st.secrets["openai"]["api_key"]
+    openai.api_key = st.secrets["openai"]["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"]
     prompt = f"Rewrite this resume bullet in a {tone} tone:\n\n{bullet_input}"
     response = openai.ChatCompletion.create(
         model="gpt-4",
@@ -90,7 +90,7 @@ def fetch_jobs(keywords, location, num_pages):
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
     headers = {
-        "X-RapidAPI-Key": "your_rapidapi_key"
+        "X-RapidAPI-Key": "71a00e1f1emsh5f78d93a2205a33p114d26jsncc6534e3f6b3"
     }
     response = requests.get(url, headers=headers, params=querystring)
     data = response.json()
