@@ -12,7 +12,7 @@ import json
 
 # --- Stacked Logos ---
 
-jobbot_logo = Image.open("jobbot_logo.png")
+jobbot_logo = Image.open("vt_logo.png")
 jobbot_buffer = BytesIO()
 jobbot_logo.save(jobbot_buffer, format="PNG")
 jobbot_base64 = base64.b64encode(jobbot_buffer.getvalue()).decode()
