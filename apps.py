@@ -27,7 +27,7 @@ st.markdown(f"""
             🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
         </div>
     """, unsafe_allow_html=True)
-except FileNotFoundError:
+#except FileNotFoundError:
 
 st.warning("One or both logo files not found.")
 
