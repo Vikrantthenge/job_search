@@ -66,12 +66,13 @@ location = st.sidebar.text_input("Location", value="India")
 num_pages = st.sidebar.slider("Pages to Search", 1, 5, 1)
 min_salary_lpa = st.sidebar.number_input("Minimum Salary (LPA)", value=24)
 min_salary_in_inr = min_salary_lpa * 100000
+include_unspecified = st.sidebar.checkbox("Include jobs with unspecified salary", value=True)
 
 if "job_df" not in st.session_state:
     st.session_state["job_df"] = pd.DataFrame()
 
-# --- Job Fetch Function with Salary Filter ---
-def fetch_jobs(keywords, location, num_pages, min_salary_in_inr):
+# --- Job Fetch Function with Salary Filter + Toggle ---
+def fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspecified):
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
     headers = {
@@ -92,13 +93,21 @@ def fetch_jobs(keywords, location, num_pages, min_salary_in_inr):
                 "Salary (Max)": f"₹{salary_max:,}",
                 "Apply Link": job["job_apply_link"]
             })
+        elif include_unspecified and salary_max == 0:
+            filtered_jobs.append({
+                "Job Title": job["job_title"],
+                "Company": job["employer_name"],
+                "Location": job["job_city"],
+                "Salary (Max)": "Not disclosed",
+                "Apply Link": job["job_apply_link"]
+            })
 
     return pd.DataFrame(filtered_jobs)
 
 # --- Job Search Trigger ---
 if st.sidebar.button("Search Jobs"):
     with st.spinner("Fetching jobs..."):
-        job_df = fetch_jobs(keywords, location, num_pages, min_salary_in_inr)
+        job_df = fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspecified)
         st.session_state["job_df"] = job_df
         if not job_df.empty:
             st.subheader("💼 Job Listings")
@@ -108,6 +117,8 @@ if st.sidebar.button("Search Jobs"):
                 st.markdown(f"💰 Salary (Max): {row.get('Salary (Max)', 'Not disclosed')}")
                 st.markdown(f"[Apply Now]({row['Apply Link']})", unsafe_allow_html=True)
                 st.markdown("---")
+            if job_df["Salary (Max)"].eq("Not disclosed").any():
+                st.info("⚠️ Some jobs do not disclose salary. You can disable 'Include jobs with unspecified salary' to filter them out.")
         else:
             st.warning("No jobs found matching salary criteria.")
 
