@@ -10,47 +10,42 @@ import gspread
 import plotly.express as px
 import json
 
-# --- Logo + Branding Header (Compact Layout) ---
-
+# --- Logo + Branding Header ---
 try:
-    logo = Image.open("vt_logo.png")  
+    logo = Image.open("vt_logo.png")
     buffered = BytesIO()
     logo.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
 
     st.markdown(f"""
-        <div style='text-align: center; margin: 0px; padding: 0px;'>
-            <img src='data:image/png;base64,{img_base64}' width='360' style='margin-bottom: -10px;'>
+        <div style='text-align: center;'>
+            <img src='data:image/png;base64,{img_base64}' width='360'>
         </div>
-        <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000; margin-top: -5px; margin-bottom: 10px;'>
+        <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000;'>
             🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
         </div>
     """, unsafe_allow_html=True)
-
 except FileNotFoundError:
     st.warning("Logo file not found.")
-
 
 # --- Resume Upload ---
 st.subheader("📤 Upload Your Resume")
 resume = st.file_uploader("Upload PDF Resume", type=["pdf"])
 parsed_skills = []
 
-# --- Simulated Resume Parser (lightweight fallback) ---
 if resume:
     parsed_skills = ["Data Analysis", "SQL", "Python", "Power BI", "Machine Learning"]
     st.success("Resume uploaded successfully!")
     st.markdown("**🔍 Simulated Keywords from Resume:**")
     st.markdown(", ".join(parsed_skills[:10]))
 
-# --- Simulated Bullet Rewriter ---
+# --- Bullet Rewriter ---
 st.subheader("🧠 Rewrite Resume Bullet (Simulated)")
 bullet_input = st.text_area("Paste a resume bullet point to enhance")
 tone = st.selectbox("Choose tone", ["assertive", "formal", "friendly"])
 
 if st.button("Simulate Rewrite"):
     if bullet_input:
-        # Simulated enhancement logic
         rewritten = f"• Spearheaded demand forecasting models, driving a 12% profitability surge — {tone.capitalize()} delivery for recruiter impact."
         st.markdown("**🔁 Simulated Rewritten Bullet:**")
         st.success(rewritten)
@@ -69,11 +64,14 @@ default_keywords = parsed_skills[0] if parsed_skills else "Data Analyst"
 keywords = st.sidebar.text_input("Job Title", value=default_keywords)
 location = st.sidebar.text_input("Location", value="India")
 num_pages = st.sidebar.slider("Pages to Search", 1, 5, 1)
+min_salary_lpa = st.sidebar.number_input("Minimum Salary (LPA)", value=24)
+min_salary_in_inr = min_salary_lpa * 100000
 
 if "job_df" not in st.session_state:
     st.session_state["job_df"] = pd.DataFrame()
 
-def fetch_jobs(keywords, location, num_pages):
+# --- Job Fetch Function with Salary Filter ---
+def fetch_jobs(keywords, location, num_pages, min_salary_in_inr):
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
     headers = {
@@ -81,30 +79,41 @@ def fetch_jobs(keywords, location, num_pages):
     }
     response = requests.get(url, headers=headers, params=querystring)
     data = response.json()
-    jobs = [{
-        "Job Title": job["job_title"],
-        "Company": job["employer_name"],
-        "Location": job["job_city"],
-        "Apply Link": job["job_apply_link"]
-    } for job in data.get("data", [])]
-    return pd.DataFrame(jobs)
 
+    filtered_jobs = []
+    for job in data.get("data", []):
+        salary_max = job.get("job_salary_max", 0)
+        currency = job.get("job_salary_currency", "")
+        if currency == "INR" and salary_max >= min_salary_in_inr:
+            filtered_jobs.append({
+                "Job Title": job["job_title"],
+                "Company": job["employer_name"],
+                "Location": job["job_city"],
+                "Salary (Max)": f"₹{salary_max:,}",
+                "Apply Link": job["job_apply_link"]
+            })
+
+    return pd.DataFrame(filtered_jobs)
+
+# --- Job Search Trigger ---
 if st.sidebar.button("Search Jobs"):
     with st.spinner("Fetching jobs..."):
-        job_df = fetch_jobs(keywords, location, num_pages)
+        job_df = fetch_jobs(keywords, location, num_pages, min_salary_in_inr)
         st.session_state["job_df"] = job_df
         if not job_df.empty:
             st.subheader("💼 Job Listings")
             st.markdown(f"🔢 Jobs found: **{len(job_df)}**")
             for i, row in job_df.iterrows():
                 st.markdown(f"**{row['Job Title']}** at *{row['Company']}* — {row['Location']}")
+                st.markdown(f"💰 Salary (Max): {row.get('Salary (Max)', 'Not disclosed')}")
                 st.markdown(f"[Apply Now]({row['Apply Link']})", unsafe_allow_html=True)
                 st.markdown("---")
         else:
-            st.warning("No jobs found.")
+            st.warning("No jobs found matching salary criteria.")
 
 job_df = st.session_state.get("job_df", pd.DataFrame())
 
+# --- Auto Apply Logic ---
 if st.button("🚀 Auto-Apply to All"):
     if resume and not job_df.empty:
         st.success("Bot applied to all matching jobs ✅ (simulated)")
@@ -113,7 +122,6 @@ if st.button("🚀 Auto-Apply to All"):
         top_roles = job_df["Job Title"].value_counts().head(5)
 
         timestamp = datetime.now().strftime("%d-%b-%Y %I:%M %p")
-        
         log_df = pd.DataFrame({
             "Company": applied_companies,
             "Applied On": [timestamp] * len(applied_companies),
@@ -130,9 +138,7 @@ if st.button("🚀 Auto-Apply to All"):
         for company in applied_companies:
             st.markdown(f"- {company}")
         st.text_area("📋 Copy Company List", value="\n".join(applied_companies), height=150)
-        
 
-        # --- Recruiter Metrics ---
         st.markdown("### 📊 Recruiter-Facing Metrics")
         st.markdown("**Top Cities:**")
         st.dataframe(top_locations)
@@ -160,7 +166,7 @@ if st.button("🚀 Auto-Apply to All"):
     else:
         st.error("Please upload your resume and search jobs first.")
 
-# --- Drift Monitor (Polished) ---
+# --- Drift Monitor ---
 st.markdown("### 📉 Drift Monitor – Job Title Trends Over Time")
 st.markdown("Upload two job datasets to compare how demand has shifted across roles.")
 
@@ -200,6 +206,6 @@ else:
 st.markdown("""
     <hr style='margin-top: 40px;'>
     <div style='text-align: center; font-size: 14px; color: gray;'>
-        · Built with ❤️ using Streamlit · Resume parsing enabled · OpenAI-powered rewriting · Google Sheets logging active · Recruiter metrics visualized · Drift monitoring integrated ·
+        · Built with ❤️ using Streamlit · Resume parsing enabled · OpenAI-powered rewriting · Google Sheets logging active · Recruiter metrics visualized · Drift monitoring integrated · Salary filter ≥ ₹24 LPA active ·
     </div>
 """, unsafe_allow_html=True)
