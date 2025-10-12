@@ -14,7 +14,7 @@
 ![NLP](https://img.shields.io/badge/NLP-Cosine_Similarity-green)
 ![Status](https://img.shields.io/badge/Status-Live-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-![Smart Salary Filter](https://img.shields.io/badge/Salary%20Filter-Smart%20Toggle%20%2B%20Histogram-8B0000?style=for-the-badge)
+![Smart Salary Filter](https://img.shields.io/badge/Salary%20Filter-Smart%20Toggle%20%2B%20Histogram-8B0000)
 
 ---
 
