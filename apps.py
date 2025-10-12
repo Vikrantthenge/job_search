@@ -5,18 +5,31 @@ from datetime import datetime
 from PIL import Image
 import base64
 from io import BytesIO, StringIO
-import warnings
+import json
 import gspread
 import plotly.express as px
-import json
 
-# --- Logo + Branding Header ---
-try:
+# --- CACHED LOGO LOADER ---
+@st.cache_resource
+def load_logo_base64():
     logo = Image.open("vt_logo.png")
     buffered = BytesIO()
     logo.save(buffered, format="PNG")
-    img_base64 = base64.b64encode(buffered.getvalue()).decode()
+    return base64.b64encode(buffered.getvalue()).decode()
 
+# --- CACHED GOOGLE SHEETS SETUP ---
+@st.cache_resource
+def get_worksheet():
+    creds = json.loads(st.secrets["google"]["service_account"])
+    gc = gspread.service_account_from_dict(creds)
+    sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit")
+    return sh.sheet1
+
+worksheet = get_worksheet()
+
+# --- Branding Header ---
+try:
+    img_base64 = load_logo_base64()
     st.markdown(f"""
         <div style='text-align: center;'>
             <img src='data:image/png;base64,{img_base64}' width='360'>
@@ -52,12 +65,6 @@ if st.button("Simulate Rewrite"):
     else:
         st.warning("Please enter a bullet point to rewrite.")
 
-# --- Google Sheets Setup ---
-creds = json.loads(st.secrets["google"]["service_account"])
-gc = gspread.service_account_from_dict(creds)
-sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit")
-worksheet = sh.sheet1
-
 # --- Sidebar Filters ---
 st.sidebar.header("🎯 Job Search Filters")
 default_keywords = parsed_skills[0] if parsed_skills else "Data Analyst"
@@ -71,15 +78,19 @@ include_unspecified = st.sidebar.checkbox("Include jobs with unspecified salary"
 if "job_df" not in st.session_state:
     st.session_state["job_df"] = pd.DataFrame()
 
-# --- Job Fetch Function with Salary Filter + Toggle ---
+# --- Job Fetch Function ---
 def fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspecified):
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
     headers = {
         "X-RapidAPI-Key": "71a00e1f1emsh5f78d93a2205a33p114d26jsncc6534e3f6b3"
     }
-    response = requests.get(url, headers=headers, params=querystring)
-    data = response.json()
+    try:
+        response = requests.get(url, headers=headers, params=querystring, timeout=10)
+        data = response.json()
+    except Exception as e:
+        st.error("Job API failed to respond. Try again later.")
+        return pd.DataFrame()
 
     filtered_jobs = []
     for job in data.get("data", []):
@@ -187,9 +198,13 @@ with col1:
 with col2:
     uploaded_new = st.file_uploader("➡️ New Job Data CSV", type=["csv"], key="new")
 
+@st.cache_data
+def load_csv(uploaded_file):
+    return pd.read_csv(uploaded_file)
+
 if uploaded_old and uploaded_new:
-    df_old = pd.read_csv(uploaded_old)
-    df_new = pd.read_csv(uploaded_new)
+    df_old = load_csv(uploaded_old)
+    df_new = load_csv(uploaded_new)
 
     old_freq = df_old["Job Title"].value_counts().head(10)
     new_freq = df_new["Job Title"].value_counts().head(10)
@@ -217,8 +232,7 @@ else:
 st.markdown("""
     <hr style='margin-top: 40px;'>
     <div style='text-align: center; font-size: 14px; color: gray;'>
-        · Built with ❤️ using Streamlit · Resume parsing enabled · OpenAI-powered rewriting · Google Sheets logging active · Recruiter metrics visualized · Drift monitoring integrated
+        · Built with ❤️ using Streamlit · Resume parsing enabled · OpenAI-powered rewriting · Google Sheets logging active · Recruiter metrics visualized · Drift monitoring integrated · Salary filter ≥ ₹24 LPA active ·
     </div>
-
 """, unsafe_allow_html=True)
 
