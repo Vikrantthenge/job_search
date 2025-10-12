@@ -32,6 +32,19 @@ JobSearchMatch uses NLP-powered cosine similarity to instantly match resumes wit
 
 ---
 
+### 📊 Smart Salary Filter + Histogram
+
+This app now includes a recruiter-grade salary filter with a toggle for broad search and a histogram to visualize INR salary distribution.
+
+- ✅ **Broad Search Toggle**: Includes jobs with missing or unspecified salary data.
+- ✅ **Minimum Salary Filter**: Set your threshold in LPA (Lakhs Per Annum).
+- ✅ **Salary Histogram**: Visualizes how many jobs report INR salaries — helps calibrate realistic expectations.
+- ✅ **Fallback Logic**: Ensures jobs aren't excluded due to missing salary fields.
+
+> This feature improves recruiter scanability and ensures high-salary roles aren't missed due to API limitations.
+
+---
+
 ## 💼 Use Cases
 
 - Recruiters screening candidate-job fit
