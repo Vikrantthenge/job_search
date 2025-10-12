@@ -75,6 +75,66 @@ min_salary_lpa = st.sidebar.number_input("Minimum Salary (LPA)", value=24)
 min_salary_in_inr = min_salary_lpa * 100000
 include_unspecified = st.sidebar.checkbox("Include jobs with unspecified salary", value=True)
 
+# --- Sidebar Toggle for Broad Search ---
+broad_search = st.sidebar.checkbox("Enable Broad Search (Ignore Salary Filter)", value=True)
+
+# --- Job Fetch Function with Smart Filter ---
+def fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspecified, broad_search):
+    url = "https://jsearch.p.rapidapi.com/search"
+    querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
+    headers = {
+        "X-RapidAPI-Key": "71a00e1f1emsh5f78d93a2205a33p114d26jsncc6534e3f6b3"
+    }
+
+    try:
+        response = requests.get(url, headers=headers, params=querystring, timeout=10)
+        data = response.json()
+    except Exception as e:
+        st.error("Job API failed to respond. Try again later.")
+        return pd.DataFrame()
+
+    filtered_jobs = []
+    salary_values = []
+
+    for job in data.get("data", []):
+        salary_max = job.get("job_salary_max", 0)
+        currency = job.get("job_salary_currency", "")
+        salary_values.append(salary_max if currency == "INR" else 0)
+
+        if broad_search:
+            filtered_jobs.append({
+                "Job Title": job["job_title"],
+                "Company": job["employer_name"],
+                "Location": job["job_city"],
+                "Salary (Max)": f"₹{salary_max:,}" if salary_max else "Not disclosed",
+                "Apply Link": job["job_apply_link"]
+            })
+        else:
+            if currency == "INR" and salary_max >= min_salary_in_inr:
+                filtered_jobs.append({
+                    "Job Title": job["job_title"],
+                    "Company": job["employer_name"],
+                    "Location": job["job_city"],
+                    "Salary (Max)": f"₹{salary_max:,}",
+                    "Apply Link": job["job_apply_link"]
+                })
+            elif include_unspecified and salary_max == 0:
+                filtered_jobs.append({
+                    "Job Title": job["job_title"],
+                    "Company": job["employer_name"],
+                    "Location": job["job_city"],
+                    "Salary (Max)": "Not disclosed",
+                    "Apply Link": job["job_apply_link"]
+                })
+
+    # --- Salary Distribution Chart ---
+    st.markdown("### 📊 Salary Distribution (INR)")
+    fig_salary = px.histogram(x=salary_values, nbins=10, title="Salary Histogram")
+    st.plotly_chart(fig_salary, use_container_width=True)
+
+    return pd.DataFrame(filtered_jobs)
+
+
 if "job_df" not in st.session_state:
     st.session_state["job_df"] = pd.DataFrame()
 
