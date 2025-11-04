@@ -1,4 +1,4 @@
-import streamlit as st
+can you polished anad give me this with excat rapidxkey here - import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime
@@ -9,53 +9,39 @@ import json
 import gspread
 import plotly.express as px
 
-# ===============================
-#        CACHE HELPERS
-# ===============================
+# --- CACHED LOGO LOADER ---
 @st.cache_resource
 def load_logo_base64():
-    try:
-        logo = Image.open("vt_logo.png")
-        buffered = BytesIO()
-        logo.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode()
-    except FileNotFoundError:
-        st.warning("Logo file not found.")
-        return None
+    logo = Image.open("vt_logo.png")
+    buffered = BytesIO()
+    logo.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
 
-
+# --- CACHED GOOGLE SHEETS SETUP ---
 @st.cache_resource
 def get_worksheet():
     creds = json.loads(st.secrets["google"]["service_account"])
     gc = gspread.service_account_from_dict(creds)
-    sh = gc.open_by_url(
-        "https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit"
-    )
+    sh = gc.open_by_url("https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit")
     return sh.sheet1
-
 
 worksheet = get_worksheet()
 
-# ===============================
-#          HEADER
-# ===============================
-img_base64 = load_logo_base64()
-if img_base64:
-    st.markdown(
-        f"""
+# --- Branding Header ---
+try:
+    img_base64 = load_logo_base64()
+    st.markdown(f"""
         <div style='text-align: center;'>
             <img src='data:image/png;base64,{img_base64}' width='360'>
         </div>
         <div style='text-align: center; font-size: 22px; font-weight: bold; color: #8B0000;'>
             🧭 <span style='color:#333;'>Job Bot</span> by <span style='color:#8B0000;'>Vikrant Thenge</span>
         </div>
-    """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
+except FileNotFoundError:
+    st.warning("Logo file not found.")
 
-# ===============================
-#        RESUME UPLOAD
-# ===============================
+# --- Resume Upload ---
 st.subheader("📤 Upload Your Resume")
 resume = st.file_uploader("Upload PDF Resume", type=["pdf"])
 parsed_skills = []
@@ -66,27 +52,20 @@ if resume:
     st.markdown("**🔍 Simulated Keywords from Resume:**")
     st.markdown(", ".join(parsed_skills[:10]))
 
-# ===============================
-#        BULLET REWRITER
-# ===============================
+# --- Bullet Rewriter ---
 st.subheader("🧠 Rewrite Resume Bullet (Simulated)")
 bullet_input = st.text_area("Paste a resume bullet point to enhance")
 tone = st.selectbox("Choose tone", ["assertive", "formal", "friendly"])
 
 if st.button("Simulate Rewrite"):
     if bullet_input:
-        rewritten = (
-            f"• Spearheaded demand forecasting models, driving a 12% profitability surge — "
-            f"{tone.capitalize()} delivery for recruiter impact."
-        )
+        rewritten = f"• Spearheaded demand forecasting models, driving a 12% profitability surge — {tone.capitalize()} delivery for recruiter impact."
         st.markdown("**🔁 Simulated Rewritten Bullet:**")
         st.success(rewritten)
     else:
         st.warning("Please enter a bullet point to rewrite.")
 
-# ===============================
-#        SIDEBAR FILTERS
-# ===============================
+# --- Sidebar Filters ---
 st.sidebar.header("🎯 Job Search Filters")
 default_keywords = parsed_skills[0] if parsed_skills else "Data Analyst"
 keywords = st.sidebar.text_input("Job Title", value=default_keywords)
@@ -94,27 +73,23 @@ location = st.sidebar.text_input("Location", value="India")
 num_pages = st.sidebar.slider("Pages to Search", 1, 5, 1)
 min_salary_lpa = st.sidebar.number_input("Minimum Salary (LPA)", value=24)
 min_salary_in_inr = min_salary_lpa * 100000
-include_unspecified = st.sidebar.checkbox(
-    "Include jobs with unspecified salary", value=True
-)
-broad_search = st.sidebar.checkbox("Enable Broad Search (Ignore Salary Filter)", True)
+include_unspecified = st.sidebar.checkbox("Include jobs with unspecified salary", value=True)
 
-# ===============================
-#         JOB FETCH LOGIC
-# ===============================
-@st.cache_data(ttl=3600)
-def fetch_jobs(
-    keywords, location, num_pages, min_salary_in_inr, include_unspecified, broad_search
-):
+# --- Sidebar Toggle for Broad Search ---
+broad_search = st.sidebar.checkbox("Enable Broad Search (Ignore Salary Filter)", value=True)
+
+# --- Job Fetch Function with Smart Filter ---
+def fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspecified, broad_search):
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
-    headers = {"X-RapidAPI-Key": st.secrets["0d6793cba4msha277a2305dd5c84p16292ajsn52c4cc99d5c8"]}
+    headers = {
+        "X-RapidAPI-Key": "02bbbfb0a7msh85c09c88e6db3d1p11c6acjsnb81aab1a52b6"
+    }
 
     try:
         response = requests.get(url, headers=headers, params=querystring, timeout=10)
-        response.raise_for_status()
         data = response.json()
-    except Exception:
+    except Exception as e:
         st.error("Job API failed to respond. Try again later.")
         return pd.DataFrame()
 
@@ -124,31 +99,38 @@ def fetch_jobs(
     for job in data.get("data", []):
         salary_max = job.get("job_salary_max", 0)
         currency = job.get("job_salary_currency", "")
-
-        if currency == "INR":
-            salary_values.append(salary_max)
-
-        job_entry = {
-            "Job Title": job.get("job_title", "N/A"),
-            "Company": job.get("employer_name", "N/A"),
-            "Location": job.get("job_city", "N/A"),
-            "Salary (Max)": (
-                f"₹{salary_max:,}" if salary_max else "Not disclosed"
-            ),
-            "Apply Link": job.get("job_apply_link", ""),
-        }
+        salary_values.append(salary_max if currency == "INR" else 0)
 
         if broad_search:
-            filtered_jobs.append(job_entry)
-        elif currency == "INR" and salary_max >= min_salary_in_inr:
-            filtered_jobs.append(job_entry)
-        elif include_unspecified and salary_max == 0:
-            filtered_jobs.append(job_entry)
+            filtered_jobs.append({
+                "Job Title": job["job_title"],
+                "Company": job["employer_name"],
+                "Location": job["job_city"],
+                "Salary (Max)": f"₹{salary_max:,}" if salary_max else "Not disclosed",
+                "Apply Link": job["job_apply_link"]
+            })
+        else:
+            if currency == "INR" and salary_max >= min_salary_in_inr:
+                filtered_jobs.append({
+                    "Job Title": job["job_title"],
+                    "Company": job["employer_name"],
+                    "Location": job["job_city"],
+                    "Salary (Max)": f"₹{salary_max:,}",
+                    "Apply Link": job["job_apply_link"]
+                })
+            elif include_unspecified and salary_max == 0:
+                filtered_jobs.append({
+                    "Job Title": job["job_title"],
+                    "Company": job["employer_name"],
+                    "Location": job["job_city"],
+                    "Salary (Max)": "Not disclosed",
+                    "Apply Link": job["job_apply_link"]
+                })
 
-    if salary_values:
-        st.markdown("### 📊 Salary Distribution (INR)")
-        fig_salary = px.histogram(x=salary_values, nbins=10, title="Salary Histogram")
-        st.plotly_chart(fig_salary, use_container_width=True)
+    # --- Salary Distribution Chart ---
+    st.markdown("### 📊 Salary Distribution (INR)")
+    fig_salary = px.histogram(x=salary_values, nbins=10, title="Salary Histogram")
+    st.plotly_chart(fig_salary, use_container_width=True)
 
     return pd.DataFrame(filtered_jobs)
 
@@ -156,42 +138,67 @@ def fetch_jobs(
 if "job_df" not in st.session_state:
     st.session_state["job_df"] = pd.DataFrame()
 
-# ===============================
-#        JOB SEARCH BUTTON
-# ===============================
+# --- Job Fetch Function ---
+def fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspecified):
+    url = "https://jsearch.p.rapidapi.com/search"
+    querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
+    headers = {
+        "X-RapidAPI-Key": "02bbbfb0a7msh85c09c88e6db3d1p11c6acjsnb81aab1a52b6"
+    }
+    try:
+        response = requests.get(url, headers=headers, params=querystring, timeout=10)
+        data = response.json()
+    except Exception as e:
+        st.error("Job API failed to respond. Try again later.")
+        return pd.DataFrame()
+
+    filtered_jobs = []
+    for job in data.get("data", []):
+        salary_max = job.get("job_salary_max", 0)
+        currency = job.get("job_salary_currency", "")
+        if currency == "INR" and salary_max >= min_salary_in_inr:
+            filtered_jobs.append({
+                "Job Title": job["job_title"],
+                "Company": job["employer_name"],
+                "Location": job["job_city"],
+                "Salary (Max)": f"₹{salary_max:,}",
+                "Apply Link": job["job_apply_link"]
+            })
+        elif include_unspecified and salary_max == 0:
+            filtered_jobs.append({
+                "Job Title": job["job_title"],
+                "Company": job["employer_name"],
+                "Location": job["job_city"],
+                "Salary (Max)": "Not disclosed",
+                "Apply Link": job["job_apply_link"]
+            })
+
+    return pd.DataFrame(filtered_jobs)
+
+# --- Job Search Trigger ---
 if st.sidebar.button("Search Jobs"):
     with st.spinner("Fetching jobs..."):
-        job_df = fetch_jobs(
-            keywords, location, num_pages, min_salary_in_inr, include_unspecified, broad_search
-        )
+        job_df = fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspecified)
         st.session_state["job_df"] = job_df
-
         if not job_df.empty:
             st.subheader("💼 Job Listings")
             st.markdown(f"🔢 Jobs found: **{len(job_df)}**")
-
-            for _, row in job_df.iterrows():
+            for i, row in job_df.iterrows():
                 st.markdown(f"**{row['Job Title']}** at *{row['Company']}* — {row['Location']}")
-                st.markdown(f"💰 Salary (Max): {row['Salary (Max)']}")
+                st.markdown(f"💰 Salary (Max): {row.get('Salary (Max)', 'Not disclosed')}")
                 st.markdown(f"[Apply Now]({row['Apply Link']})", unsafe_allow_html=True)
                 st.markdown("---")
-
             if job_df["Salary (Max)"].eq("Not disclosed").any():
-                st.info(
-                    "⚠️ Some jobs do not disclose salary. Disable 'Include jobs with unspecified salary' to hide them."
-                )
+                st.info("⚠️ Some jobs do not disclose salary. You can disable 'Include jobs with unspecified salary' to filter them out.")
         else:
-            st.warning("No jobs found matching your criteria.")
+            st.warning("No jobs found matching salary criteria.")
 
 job_df = st.session_state.get("job_df", pd.DataFrame())
 
-# ===============================
-#        AUTO APPLY SECTION
-# ===============================
+# --- Auto Apply Logic ---
 if st.button("🚀 Auto-Apply to All"):
     if resume and not job_df.empty:
         st.success("Bot applied to all matching jobs ✅ (simulated)")
-
         applied_companies = job_df["Company"].dropna().unique().tolist()
         top_locations = job_df["Location"].value_counts().head(5)
         top_roles = job_df["Job Title"].value_counts().head(5)
@@ -201,21 +208,24 @@ if st.button("🚀 Auto-Apply to All"):
             "Company": applied_companies,
             "Applied On": [timestamp] * len(applied_companies),
             "Keyword": [keywords] * len(applied_companies),
-            "Location": [location] * len(applied_companies),
+            "Location": [location] * len(applied_companies)
         })
 
         for row in log_df.values.tolist():
             worksheet.append_row(row)
-        worksheet.update_acell("A1", f"Last synced: {timestamp}")
-
+        worksheet.update_acell('A1', f"Last synced: {timestamp}")
         st.success("✅ Synced to Google Sheet successfully")
 
         st.markdown("### 🏢 Companies Applied To")
+        for company in applied_companies:
+            st.markdown(f"- {company}")
         st.text_area("📋 Copy Company List", value="\n".join(applied_companies), height=150)
 
         st.markdown("### 📊 Recruiter-Facing Metrics")
-        st.dataframe(top_locations, use_container_width=True)
-        st.dataframe(top_roles, use_container_width=True)
+        st.markdown("**Top Cities:**")
+        st.dataframe(top_locations)
+        st.markdown("**Most Applied Roles:**")
+        st.dataframe(top_roles)
 
         role_counts = job_df["Job Title"].value_counts().reset_index()
         role_counts.columns = ["Role", "Count"]
@@ -233,14 +243,12 @@ if st.button("🚀 Auto-Apply to All"):
             label="📥 Download Applied Companies CSV",
             data=csv_buffer.getvalue(),
             file_name=f"applied_companies_{timestamp}.csv",
-            mime="text/csv",
+            mime="text/csv"
         )
     else:
         st.error("Please upload your resume and search jobs first.")
 
-# ===============================
-#        DRIFT MONITOR
-# ===============================
+# --- Drift Monitor ---
 st.markdown("### 📉 Drift Monitor – Job Title Trends Over Time")
 st.markdown("Upload two job datasets to compare how demand has shifted across roles.")
 
@@ -261,7 +269,10 @@ if uploaded_old and uploaded_new:
     old_freq = df_old["Job Title"].value_counts().head(10)
     new_freq = df_new["Job Title"].value_counts().head(10)
 
-    drift_df = pd.DataFrame({"Old": old_freq, "New": new_freq}).fillna(0)
+    drift_df = pd.DataFrame({
+        "Old": old_freq,
+        "New": new_freq
+    }).fillna(0)
 
     st.markdown("#### 🔍 Top 10 Job Titles – Frequency Comparison")
     st.dataframe(drift_df)
@@ -271,24 +282,18 @@ if uploaded_old and uploaded_new:
         barmode="group",
         title="📊 Job Title Drift Over Time",
         labels={"index": "Job Title", "value": "Frequency"},
-        color_discrete_sequence=["#8B0000", "#333333"],
+        color_discrete_sequence=["#8B0000", "#333333"]
     )
     st.plotly_chart(fig_drift, use_container_width=True)
 else:
     st.info("Upload both CSVs to view drift analysis.")
 
-# ===============================
-#           FOOTER
-# ===============================
-st.markdown(
-    """
+# --- Footer ---
+st.markdown("""
     <hr style='margin-top: 40px;'>
     <div style='text-align: center; font-size: 14px; color: gray;'>
-        · Built with ❤️ using Streamlit · Resume parsing enabled · OpenAI-powered rewriting · 
-        Google Sheets logging active · Recruiter metrics visualized · Drift monitoring integrated · Salary filter ≥ ₹24 LPA ·
+        · Built with ❤️ using Streamlit · Resume parsing enabled · OpenAI-powered rewriting · Google Sheets logging active · Recruiter metrics visualized · Drift monitoring integrated · Salary filter ≥ ₹24 LPA active ·
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
 
