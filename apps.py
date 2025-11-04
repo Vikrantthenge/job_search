@@ -108,7 +108,7 @@ def fetch_jobs(
 ):
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
-    headers = {"X-RapidAPI-Key": st.secrets["12c2532bbced21527958ff01942130d2852bf691"]}
+    headers = {"X-RapidAPI-Key": st.secrets["0d6793cba4msha277a2305dd5c84p16292ajsn52c4cc99d5c8"]}
 
     try:
         response = requests.get(url, headers=headers, params=querystring, timeout=10)
@@ -290,4 +290,5 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
 
