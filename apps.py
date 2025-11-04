@@ -83,7 +83,7 @@ def fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspeci
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
     headers = {
-        "X-RapidAPI-Key": "71a00e1f1emsh5f78d93a2205a33p114d26jsncc6534e3f6b3"
+        "X-RapidAPI-Key": "453f71284amsh4fe06013a647df5p1c6fa8jsnaa2f248af969"
     }
 
     try:
@@ -143,7 +143,7 @@ def fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspeci
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
     headers = {
-        "X-RapidAPI-Key": "71a00e1f1emsh5f78d93a2205a33p114d26jsncc6534e3f6b3"
+        "X-RapidAPI-Key": "453f71284amsh4fe06013a647df5p1c6fa8jsnaa2f248af969"
     }
     try:
         response = requests.get(url, headers=headers, params=querystring, timeout=10)
