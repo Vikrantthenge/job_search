@@ -143,7 +143,7 @@ def fetch_jobs(keywords, location, num_pages, min_salary_in_inr, include_unspeci
     url = "https://jsearch.p.rapidapi.com/search"
     querystring = {"query": f"{keywords} in {location}", "num_pages": str(num_pages)}
     headers = {
-        "X-RapidAPI-Key": "71a00e1f1emsh5f78d93a2205a33p114d26jsncc6534e3f6b3"
+        "X-RapidAPI-Key": "02bbbfb0a7msh85c09c88e6db3d1p11c6acjsnb81aab1a52b6"
     }
     try:
         response = requests.get(url, headers=headers, params=querystring, timeout=10)
@@ -295,5 +295,6 @@ st.markdown("""
         · Built with ❤️ using Streamlit · Resume parsing enabled · OpenAI-powered rewriting · Google Sheets logging active · Recruiter metrics visualized · Drift monitoring integrated · Salary filter ≥ ₹24 LPA active ·
     </div>
 """, unsafe_allow_html=True)
+
 
 
