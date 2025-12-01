@@ -164,14 +164,53 @@ def recency_score(dt):
         return 5
 
 def compute_score(job, skills, target_titles, min_salary, prefs):
-    combo = " ".join([job.get("title",""), job.get("company",""), job.get("location","")])
-    s = 0
-    s += title_score(job.get("title",""), target_titles)
-    s += skills_score(combo, skills)
-    s += salary_score(job.get("salary_max",0), min_salary)
-    s += location_score(job.get("location",""), prefs)
-    s += recency_score(job.get("date_posted",""))
-    return round(min(100,s),1)
+    """
+    Defensive scoring function: accepts dict-like or pandas Series or None.
+    Returns 0 if job is invalid. Otherwise computes same weighted score.
+    """
+    try:
+        if not job:
+            return 0.0
+
+        # Support dicts and pandas Series (both have .get). For numpy/other types, coerce safely.
+        # Use .get where possible but fallback to indexing or attribute access.
+        def safe_get(obj, key, default=""):
+            try:
+                # dict-like
+                if hasattr(obj, "get"):
+                    val = obj.get(key, default)
+                else:
+                    # try dictionary-style indexing
+                    val = obj[key] if key in obj else default
+                # coerce None to default and ensure string where needed
+                return val if val is not None else default
+            except Exception:
+                return default
+
+        title = str(safe_get(job, "title", "") or "")
+        company = str(safe_get(job, "company", "") or "")
+        location = str(safe_get(job, "location", "") or "")
+        salary_val = safe_get(job, "salary_max", 0) or 0
+        date_posted = safe_get(job, "date_posted", "")
+
+        combo = " ".join([title, company, location])
+
+        s = 0.0
+        s += title_score(title, target_titles)
+        s += skills_score(combo, skills)
+        try:
+            # ensure salary_val is numeric
+            salary_num = float(salary_val)
+        except Exception:
+            salary_num = 0.0
+        s += salary_score(salary_num, min_salary)
+        s += location_score(location, prefs)
+        s += recency_score(date_posted)
+        return round(min(100.0, s), 1)
+    except Exception:
+        # In case of any unexpected error, return 0 to avoid app crash.
+        return 0.0
+
 
 IMPACT_KEYWORDS = {
     "ml": ["ml","machine learning","model","deep learning","pytorch","tensorflow","llm","bert","transformer","mlops"],
