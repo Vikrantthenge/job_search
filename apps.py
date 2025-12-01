@@ -32,10 +32,13 @@ def load_logo_base64():
 
 RAPIDAPI_KEY = st.secrets.get("rapidapi", {}).get("key", "")
 
+import json
+import gspread
+import streamlit as st
+
 @st.cache_resource
 def google_sheet():
     try:
-        # Load the service account JSON from secrets (inline JSON version)
         creds = json.loads(st.secrets["google"]["service_account"])
         gc = gspread.service_account_from_dict(creds)
 
@@ -45,6 +48,7 @@ def google_sheet():
     except Exception as e:
         st.error(f"Google Sheets Error: {e}")
         return None
+
 
 ### ————————————————————————————————————————————
 ### SECTION 2 — FETCH JOBS
