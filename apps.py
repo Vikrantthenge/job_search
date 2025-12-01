@@ -307,7 +307,7 @@ logo = load_logo_base64()
 if logo:
     st.markdown(f"<div style='text-align:center'><img src='data:image/png;base64,{logo}' width='250'></div>", unsafe_allow_html=True)
 
-st.title("JobBot (Data Scientist & Analytics)")
+st.title("JobBot (Data Scientist & Analytics Engineer)")
 
 
 ### OPTIONS
@@ -397,8 +397,78 @@ if df is not None and not df.empty:
 
         st.markdown("---")
 
+        # --------------------------------------------
+# GOOGLE SHEET CONNECTION TESTER
+# --------------------------------------------
+
+import traceback
+
+st.markdown("## 🔧 Google Sheet Connection Tester")
+
+if st.button("Test Google Sheets Connection"):
+    try:
+        # 1. Load service account
+        st.write("🔍 Loading Google credentials...")
+
+        try:
+            creds = json.loads(st.secrets["google"]["service_account"])
+            st.success("✔ service_account loaded")
+        except Exception as e:
+            st.error("❌ Failed to load service_account from secrets.toml")
+            st.error(str(e))
+            st.stop()
+
+        # 2. Connect to Google Sheets
+        st.write("🔍 Connecting to Google Sheets...")
+
+        try:
+            gc = gspread.service_account_from_dict(creds)
+            st.success("✔ Authenticated with Google")
+        except Exception as e:
+            st.error("❌ Authentication failed")
+            st.error(str(e))
+            st.stop()
+
+        # 3. Open the sheet
+        st.write("🔍 Opening sheet URL...")
+
+        try:
+            sheet_url = st.secrets["google"]["sheet_url"]
+            sh = gc.open_by_url(sheet_url)
+            st.success("✔ Google Sheet opened successfully")
+        except Exception as e:
+            st.error("❌ Could not open Google Sheet")
+            st.error(str(e))
+            st.stop()
+
+        # 4. Access sheet1
+        try:
+            worksheet = sh.sheet1
+            st.success("✔ Worksheet loaded")
+        except Exception as e:
+            st.error("❌ Could not access sheet1")
+            st.error(str(e))
+            st.stop()
+
+        # 5. Attempt writing a test row (non-destructive)
+        st.write("🔍 Testing write permission...")
+
+        try:
+            worksheet.update_acell("A1", "Connection OK ✔")
+            st.success("✔ Write test passed (you have Editor access)")
+        except Exception as e:
+            st.error("❌ Write permission failed")
+            st.error("Share the sheet with your service_account email")
+            st.error(str(e))
+            st.stop()
+
+        st.success("🎉 Google Sheet Test Successful! Everything is configured correctly.")
+
+    except:
+        st.error("❌ Unexpected error occurred")
+        st.error(traceback.format_exc())
+
 
 ### FOOTER
 st.markdown("<hr><center>JobBot+ Full Edition — Built for Vikrant</center>", unsafe_allow_html=True)
-
 
