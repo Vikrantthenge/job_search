@@ -40,7 +40,7 @@ def google_sheet():
     try:
         creds = json.loads(st.secrets["google"]["service_account"])
         gc = gspread.service_account_from_dict(creds)
-        sh = gc.open_by_url(st.secrets["google"]["sheet_url"])
+        sh = gc.open_by_url(st.secrets["google"]["https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit?gid=0#gid=0"])
         return sh.sheet1
     except:
         return None
