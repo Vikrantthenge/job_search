@@ -34,8 +34,8 @@ def load_logo_base64(path="vt_logo.png"):
 # ---------------------
 # Put these keys in Streamlit secrets: rapidapi.key, google.service_account (JSON), smtp.user, smtp.pass
 if "rapidapi" not in st.secrets:
-    st.warning("Set RapidAPI key in st.secrets['rapidapi']['key'] for best results.")
-RAPIDAPI_KEY = st.secrets.get("rapidapi", {}).get("key", "")
+    st.warning("Set RapidAPI key in st.secrets['rapidapi']['453f71284amsh4fe06013a647df5p1c6fa8jsnaa2f248af969'] for best results.")
+RAPIDAPI_KEY = st.secrets.get("rapidapi", {}).get("453f71284amsh4fe06013a647df5p1c6fa8jsnaa2f248af969", "")
 
 # ---------------------
 # Google Sheet setup
@@ -364,3 +364,4 @@ st.markdown("""
 Built with ⚙️ • Job scraping (RapidAPI + optional Indeed) • Scoring • Message templates • Google Sheets logging • Email alerts  
 No auto-apply. Respect platforms' terms of service.
 """)
+
