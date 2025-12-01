@@ -401,4 +401,3 @@ if df is not None and not df.empty:
 ### FOOTER
 st.markdown("<hr><center>JobBot+ Full Edition — Built for Vikrant</center>", unsafe_allow_html=True)
 
-
