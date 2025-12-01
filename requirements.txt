@@ -1,7 +1,11 @@
 streamlit
 pandas
 requests
-plotly
+beautifulsoup4
 gspread
 oauth2client
+plotly
+python-dotenv
+Pillow
+
 numpy==1.26.4
