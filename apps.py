@@ -13,12 +13,6 @@ import base64
 import gspread
 import plotly.express as px
 
-# ---- GOOGLE SHEETS CONNECTION ----
-sa_file = st.secrets["google"]["service_account_file"]
-sheet_url = st.secrets["google"]["https://docs.google.com/spreadsheets/d/1iBBq1tPtVPjBfYv1GEDCjR6rx4tL5JyO2QthiXAfZhk/edit?gid=0#gid=0"]
-
-gc = gspread.service_account(filename=sa_file)
-worksheet = gc.open_by_url().sheet1
 
 
 ### ————————————————————————————————————————————
