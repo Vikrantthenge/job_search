@@ -307,7 +307,7 @@ logo = load_logo_base64()
 if logo:
     st.markdown(f"<div style='text-align:center'><img src='data:image/png;base64,{logo}' width='250'></div>", unsafe_allow_html=True)
 
-st.title("JobBot+ — Vikrant (Data Scientist & Analytics Engineer)")
+st.title("JobBot (Data Scientist & Analytics Engineer)")
 
 
 ### OPTIONS
