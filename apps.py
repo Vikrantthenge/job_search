@@ -17,7 +17,7 @@ import plotly.express as px
 ### SECTION 1 — CONFIG
 ### ————————————————————————————————————————————
 
-st.set_page_config(page_title="JobBot+ — Vikrant", layout="wide")
+st.set_page_config(page_title="JobBot", layout="wide")
 
 def load_logo_base64():
     try:
@@ -400,4 +400,5 @@ if df is not None and not df.empty:
 
 ### FOOTER
 st.markdown("<hr><center>JobBot+ Full Edition — Built for Vikrant</center>", unsafe_allow_html=True)
+
 
