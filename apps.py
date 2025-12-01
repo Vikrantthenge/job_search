@@ -2,7 +2,6 @@
 ### JOBBOT+ FULL PATCHED EDITION (VIKRANT)
 ### ————————————————————————————————————————————
 
-
 import streamlit as st
 import pandas as pd
 import requests, json, time, hashlib, re
@@ -14,12 +13,6 @@ import base64
 import gspread
 import plotly.express as px
 
-# ---- GOOGLE SHEETS CONNECTION ----
-sa_file = st.secrets["google"]["service_account_file"]
-sheet_url = st.secrets["google"]["sheet_url"]
-
-gc = gspread.service_account(filename=sa_file)
-worksheet = gc.open_by_url(sheet_url).sheet1
 
 
 ### ————————————————————————————————————————————
@@ -39,6 +32,16 @@ def load_logo_base64():
 
 RAPIDAPI_KEY = st.secrets.get("rapidapi", {}).get("key", "")
 
+@st.cache_resource
+def google_sheet():
+    try:
+        gc = gspread.service_account(filename=st.secrets["google"]["service_account_file"])
+
+        sh = gc.open_by_url(st.secrets["google"]["sheet_url"])
+        return sh.sheet1
+    except Exception as e:
+        st.error(f"Google Sheets Error: {e}")
+        return None
 
 
 ### ————————————————————————————————————————————
