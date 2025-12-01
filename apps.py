@@ -35,14 +35,16 @@ RAPIDAPI_KEY = st.secrets.get("rapidapi", {}).get("key", "")
 @st.cache_resource
 def google_sheet():
     try:
-        gc = gspread.service_account(filename=st.secrets["google"]["service_account_file"])
+        # Load the service account JSON from secrets (inline JSON version)
+        creds = json.loads(st.secrets["google"]["service_account"])
+        gc = gspread.service_account_from_dict(creds)
 
         sh = gc.open_by_url(st.secrets["google"]["sheet_url"])
         return sh.sheet1
+
     except Exception as e:
         st.error(f"Google Sheets Error: {e}")
         return None
-
 
 ### ————————————————————————————————————————————
 ### SECTION 2 — FETCH JOBS
