@@ -234,10 +234,6 @@ def log_to_sheet(row):
     except Exception as e:
         return False, str(e)
 
-# ---------------------------
-# UI
-# ---------------------------
-st.title("JobBot+ — Job Search & Application Assistant")
 
 st.sidebar.header("Filters")
 
@@ -336,4 +332,5 @@ if jobs_list:
             st.info("Below 80 — Not sending")
 
 st.caption("JobBot+ v1 — Hybrid Edition.")
+
 
