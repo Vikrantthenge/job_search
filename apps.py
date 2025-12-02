@@ -1,5 +1,5 @@
 ### ————————————————————————————————————————————
-### JOBBOT+ FULL PATCHED EDITION (VIKRANT)
+### JOBBOT (VIKRANT)
 ### ————————————————————————————————————————————
 
 import streamlit as st
@@ -315,7 +315,7 @@ logo = load_logo_base64()
 if logo:
     st.markdown(f"<div style='text-align:center'><img src='data:image/png;base64,{logo}' width='250'></div>", unsafe_allow_html=True)
 
-st.title("JobBot (Data Scientist & Analytics Engineer)")
+st.title("JobBot (Data Scientist & Analytics)")
 
 
 ### OPTIONS
@@ -408,4 +408,5 @@ if df is not None and not df.empty:
 
 ### FOOTER
 st.markdown("<hr><center>JobBot+ Full Edition — Built for Vikrant</center>", unsafe_allow_html=True)
+
 
