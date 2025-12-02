@@ -14,7 +14,6 @@ from twilio.rest import Client as TwilioClient
 import tldextract
 from dateutil import parser as dateparser
 
-st.set_page_config(page_title="JobBot", layout="wide")
 
 def load_logo_base64():
     try:
@@ -393,6 +392,7 @@ if jobs_list:
 
 st.markdown("---")
 st.caption("JobBot+ v1 — Hybrid. Built for Vikrant. Extend with the Chrome 'Scan Job' extension by posting job JSON to your JobBot endpoint.")
+
 
 
 
