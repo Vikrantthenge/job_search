@@ -2,6 +2,7 @@
 import streamlit as st
 import json
 import gspread
+import base64
 import requests
 import pandas as pd
 from datetime import datetime
@@ -376,4 +377,5 @@ if jobs_list:
 
 st.markdown("---")
 st.caption("JobBot+ v1 — Hybrid. Built for Vikrant. Extend with the Chrome 'Scan Job' extension by posting job JSON to your JobBot endpoint.")
+
 
