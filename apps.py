@@ -24,7 +24,7 @@ def load_logo_base64():
     except Exception as e:
         return None
 
-st.title("JobBot+ — Hybrid")
+st.title("JobBot+ — Job Search & Application Assistant")
 
 logo_b64 = load_logo_base64()
 if logo_b64:
@@ -242,7 +242,7 @@ def log_to_sheet(row):
 # ---------------------------
 # Streamlit UI
 # ---------------------------
-st.title("JobBot+ — Job Search & Application Assistant")
+
 st.sidebar.header("JobBot Controls")
 
 with st.sidebar.expander("Search & Filters", expanded=True):
@@ -392,6 +392,7 @@ if jobs_list:
 
 st.markdown("---")
 st.caption("JobBot+ v1 — Hybrid. Built for Vikrant. Extend with the Chrome 'Scan Job' extension by posting job JSON to your JobBot endpoint.")
+
 
 
 
