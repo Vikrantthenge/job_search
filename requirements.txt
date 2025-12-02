@@ -1,17 +1,17 @@
 streamlit
+gspread
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
 pandas
 requests
-beautifulsoup4
-gspread
-oauth2client
-plotly
-python-dotenv
 Pillow
-
-numpy==1.26.4
-twilio
 tldextract
-base64
+python-dateutil
+twilio
+PyPDF2
+
+
 
 
 
