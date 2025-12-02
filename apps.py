@@ -2,6 +2,8 @@
 import streamlit as st
 import json
 import gspread
+from PIL import Image
+from io import BytesIO
 import base64
 import requests
 import pandas as pd
@@ -16,13 +18,27 @@ st.set_page_config(page_title="JobBot", layout="wide")
 
 def load_logo_base64():
     try:
-        logo = Image.open("vt_logo.png")
+        logo = Image.open("vt_logo.png")  # file must exist in repo root
         buf = BytesIO()
         logo.save(buf, format="PNG")
         return base64.b64encode(buf.getvalue()).decode()
-    except:
+    except Exception as e:
         return None
 
+st.title("JobBot+ — Hybrid")
+
+logo_b64 = load_logo_base64()
+if logo_b64:
+    st.markdown(
+        f"""
+        <div style='text-align:center; margin-bottom:10px;'>
+            <img src='data:image/png;base64,{logo_b64}' width='260'>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+else:
+    st.info("Logo not found — upload vt_logo.png to project root.")
 
 # ---------------------------
 # Google Sheets helper
@@ -377,5 +393,6 @@ if jobs_list:
 
 st.markdown("---")
 st.caption("JobBot+ v1 — Hybrid. Built for Vikrant. Extend with the Chrome 'Scan Job' extension by posting job JSON to your JobBot endpoint.")
+
 
 
