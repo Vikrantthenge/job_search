@@ -1,412 +1,368 @@
-### ————————————————————————————————————————————
-### JOBBOT (VIKRANT)
-### ————————————————————————————————————————————
-
+# app.py - JobBot+ Version C (Hybrid)
 import streamlit as st
-import pandas as pd
-import requests, json, time, hashlib, re
-from datetime import datetime
-from bs4 import BeautifulSoup
-from io import BytesIO, StringIO
-from PIL import Image
-import base64
-import gspread
-import plotly.express as px
-
-
-
-### ————————————————————————————————————————————
-### SECTION 1 — CONFIG
-### ————————————————————————————————————————————
-
-st.set_page_config(page_title="JobBot", layout="wide")
-
-def load_logo_base64():
-    try:
-        logo = Image.open("vt_logo.png")
-        buf = BytesIO()
-        logo.save(buf, format="PNG")
-        return base64.b64encode(buf.getvalue()).decode()
-    except:
-        return None
-
-RAPIDAPI_KEY = st.secrets.get("rapidapi", {}).get("key", "")
-
 import json
 import gspread
-import streamlit as st
+import requests
+import pandas as pd
+from datetime import datetime
+import re
+import uuid
+from twilio.rest import Client as TwilioClient
+import tldextract
+from dateutil import parser as dateparser
 
+st.set_page_config(page_title="JobBot+ — Vikrant", layout="wide")
+
+# ---------------------------
+# Google Sheets helper
+# ---------------------------
 @st.cache_resource
 def google_sheet():
     try:
         creds = json.loads(st.secrets["google"]["service_account"])
         gc = gspread.service_account_from_dict(creds)
-
         sh = gc.open_by_url(st.secrets["google"]["sheet_url"])
         return sh.sheet1
-
     except Exception as e:
         st.error(f"Google Sheets Error: {e}")
         return None
 
+worksheet = google_sheet()
 
-### ————————————————————————————————————————————
-### SECTION 2 — FETCH JOBS
-### ————————————————————————————————————————————
+# ---------------------------
+# Utility functions
+# ---------------------------
+def uid():
+    return uuid.uuid4().hex[:8]
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (JobBot/1.0)"}
+def detect_emails(text):
+    # simple robust regex: returns unique emails
+    emails = set(re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text or ""))
+    return list(emails)
 
-def fetch_jobs_rapidapi(query, pages=1):
-    out = []
+def extract_company_domain(url_or_text):
+    try:
+        res = tldextract.extract(url_or_text)
+        if res.domain:
+            return f"{res.domain}.{res.suffix}"
+    except:
+        pass
+    return None
+
+def parse_salary_to_lpa(salary_text):
+    # Very simple parsers - extend as needed
+    if not salary_text: return 0.0
+    s = salary_text.replace(",", "").lower()
+    # handle yearly INR like "24 LPA" or "24 lakhs"
+    m = re.search(r"(\d+(\.\d+)?)\s*(lakh|lpa|lakhs|lacs|lac|l)\b", s)
+    if m:
+        return float(m.group(1))
+    m2 = re.search(r"(\d+(\.\d+)?)\s*(inr|₹)\s*", s)
+    if m2:
+        # assume absolute rupee, convert to LPA if large
+        v = float(m2.group(1))
+        if v > 10000:
+            return round(v/100000, 1)
+        return v
+    # fallback: numbers present
+    m3 = re.search(r"(\d+(\.\d+)?)", s)
+    if m3:
+        val = float(m3.group(1))
+        if val > 1000: return round(val/100000, 1)
+        return val
+    return 0.0
+
+# Simple skill list you have (edit this list)
+USER_SKILLS = [
+    "python","sql","power bi","powerbi","pandas","numpy","scikit-learn",
+    "prophet","arima","streamlit","aws","gcp","etl","forecasting","nlp","shap"
+]
+
+def skill_match_score(job_text, user_skills=USER_SKILLS):
+    text = (job_text or "").lower()
+    hits = [s for s in user_skills if s.lower() in text]
+    score = min(100, int(len(hits)/max(1,len(user_skills))*100))
+    return score, hits
+
+# Job classification keywords (simple)
+CLASS_KEYWORDS = {
+    "data_scientist": ["data scientist","ml engineer","machine learning","deep learning","model","classification","regression","neural network"],
+    "data_engineer": ["spark","airflow","etl","pipeline","databricks","data engineering"],
+    "analytics_engineer": ["analytics engineer","dbt","data modeling","star schema","dimensional"],
+    "data_analyst": ["power bi","tableau","excel","dashboard","visualization","analyst"],
+    "ml_engineer": ["mlops","model deployment","docker","kubernetes","fastapi","tensorflow","pytorch"],
+    "nlp_engineer": ["nlp","natural language","bert","transformer","text classification"]
+}
+
+def classify_job(text):
+    t = (text or "").lower()
+    scores = {}
+    for k, kws in CLASS_KEYWORDS.items():
+        s = sum(1 for kw in kws if kw in t)
+        scores[k] = s
+    # choose top
+    best = max(scores, key=lambda k: scores[k])
+    return best, scores
+
+def compute_job_score(job, user_skills=USER_SKILLS, salary_weight=0.4, skill_weight=0.6):
+    # job: dict with title, description, salary_text
+    text = " ".join([str(job.get(k,"")) for k in ("title","description","company")])
+    skill_score, hits = skill_match_score(text, user_skills)
+    salary_lpa = parse_salary_to_lpa(job.get("salary_text") or job.get("salary") or "")
+    # normalize salary to 0-100 where 24 LPA = threshold
+    sal_score = min(100, int((salary_lpa / 30.0) * 100))
+    final = int(skill_score*skill_weight + sal_score*salary_weight)
+    return final, skill_score, salary_lpa, hits
+
+def generate_resume_snippet(job_title, company, hits):
+    # short, recruiter-facing bullet
+    bullets = []
+    if hits:
+        top = ", ".join(hits[:4])
+        bullets.append(f"Spearheaded data & ML workflows leveraging {top} to deliver actionable forecasting and performance dashboards for operations.")
+    else:
+        bullets.append(f"Delivered end-to-end analytics solutions (Python, SQL, Power BI) to improve operational decision making.")
+    bullets.append(f"Built productionized models and dashboards to support planning & reduce manual effort at scale.")
+    return "\n".join(["• " + b for b in bullets])
+
+def mini_project_suggestion(missing_skills):
+    # simple heuristics: suggest one compact project
+    if not missing_skills:
+        return "Your skill set matches well. Suggested mini-project: Convert one of your portfolio projects to a deployed Streamlit app with CI and hosted inference."
+    ms = ", ".join(missing_skills[:3])
+    return (f"Mini-project: Build an end-to-end project that covers {ms}. Example: Build a text-classification API (FastAPI) trained with an LSTM/BERT model, "
+            "host model on a small VM, add a Streamlit demo and CI. Deliverables: README, deployed demo, repo + short writeup.")
+
+def interview_answers(job_title, job_desc):
+    # simple template generator
+    ans = {}
+    ans["tell_me_about_yourself"] = (f"I am a data and analytics professional who builds end-to-end solutions — from data pipelines to forecasting and ML models — "
+                                    f"using Python, SQL and Power BI. Recently I delivered forecasting and predictive maintenance projects that improved decision-making and reduced manual work.")
+    ans["why_hire_you"] = ("I bridge domain operations and analytics: I translate operational problems into data solutions, deliver deployable models and dashboards, "
+                          "and communicate impact to stakeholders.")
+    ans["technical_strengths"] = ("I focus on forecasting, classification, feature engineering, and model explainability (SHAP). I also deploy models via Streamlit/AWS.")
+    ans["company_fit"] = (f"I am excited about the role of {job_title} because my experience driving forecasting and automation aligns with the responsibilities described.")
+    return ans
+
+# ---------------------------
+# RapidAPI job fetch (jsearch) - small wrapper
+# ---------------------------
+RAPIDAPI_KEY = st.secrets.get("rapidapi", {}).get("key", None)
+
+def fetch_jobs_rapidapi(query, location="India", pages=1):
+    if not RAPIDAPI_KEY:
+        st.warning("RapidAPI key missing in secrets; simulated results will be used.")
+        return []
     url = "https://jsearch.p.rapidapi.com/search"
     headers = {
         "X-RapidAPI-Key": RAPIDAPI_KEY,
         "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
     }
-
-    for _ in range(pages):
-        try:
-            resp = requests.get(url, headers=headers, params={"query": query, "num_pages": "1"}, timeout=10)
-            data = resp.json().get("data", [])
-        except:
-            continue
-
-        for job in data:
-            out.append({
-                "title": job.get("job_title"),
-                "company": job.get("employer_name"),
-                "location": job.get("job_city") or job.get("job_country"),
-                "salary_max": job.get("job_salary_max") or 0,
-                "currency": job.get("job_salary_currency") or "",
-                "date_posted": job.get("job_posted_at_datetime_utc") or "",
-                "apply_link": job.get("job_apply_link"),
-                "source": "RapidAPI"
+    params = {"query": f"{query} in {location}", "num_pages": pages}
+    try:
+        r = requests.get(url, headers=headers, params=params, timeout=12)
+        data = r.json().get("data", [])
+        jobs = []
+        for it in data:
+            jobs.append({
+                "title": it.get("job_title"),
+                "company": it.get("employer_name"),
+                "location": it.get("job_city") or it.get("job_country"),
+                "salary": it.get("job_salary"),
+                "salary_text": it.get("job_salary"),
+                "description": it.get("job_description"),
+                "apply_link": it.get("job_apply_link") or it.get("job_link"),
+                "source": it.get("job_highlights", {}).get("skills", "")
             })
-    return out
-
-
-def fetch_jobs_indeed(query, location, pages=1):
-    results = []
-    for p in range(pages):
-        try:
-            url = f"https://www.indeed.co.in/jobs?q={query}&l={location}&start={p*10}"
-            r = requests.get(url, headers=HEADERS, timeout=10)
-            soup = BeautifulSoup(r.text, "html.parser")
-        except:
-            continue
-
-        cards = soup.select("a.tapItem")
-        for c in cards:
-            title = c.select_one("h2")
-            company = c.select_one(".companyName")
-            loc = c.select_one(".companyLocation")
-
-            results.append({
-                "title": title.get_text(strip=True) if title else None,
-                "company": company.get_text(strip=True) if company else None,
-                "location": loc.get_text(strip=True) if loc else None,
-                "salary_max": 0,
-                "currency": "",
-                "date_posted": "",
-                "apply_link": "https://www.indeed.co.in" + c.get("href", ""),
-                "source": "Indeed"
-            })
-    return results
-
-
-def aggregate_jobs(query, location, pages, use_indeed):
-    jobs = fetch_jobs_rapidapi(f"{query} in {location}", pages)
-    if use_indeed:
-        jobs += fetch_jobs_indeed(query, location, pages)
-    return jobs
-
-
-### ————————————————————————————————————————————
-### SECTION 3 — SCORING
-### ————————————————————————————————————————————
-
-def normalize(s): return (s or "").lower().strip()
-
-def title_score(title, target_titles):
-    t = normalize(title)
-    for target in target_titles:
-        if target.lower() in t:
-            return 30
-    if any(x in t for x in ["data scientist","ml","ai","analytics"]):
-        return 20
-    return 0
-
-def skills_score(text, skills):
-    text = normalize(text)
-    per = 30 / len(skills)
-    score = sum(per for s in skills if s.lower() in text)
-    return min(30, score)
-
-def salary_score(s, min_salary):
-    try:
-        s = float(s)
-    except:
-        s = 0
-    if s >= min_salary: return 15
-    if s == 0: return 7.5
-    return max(0, 15 * (s / min_salary))
-
-def location_score(loc, prefs):
-    l = normalize(loc)
-    for p in prefs:
-        if p.lower() in l:
-            return 10
-    if "remote" in l:
-        return 8
-    return 0
-
-def recency_score(dt):
-    if not dt: return 5
-    try:
-        posted = datetime.fromisoformat(dt.replace("Z",""))
-        days = (datetime.utcnow() - posted).days
-        if days <= 3: return 10
-        if days <= 7: return 7
-        if days <= 30: return 4
-        return 1
-    except:
-        return 5
-
-
-### ————————————————————————————————————————————
-### PATCHED compute_score (NO CRASHES)
-### ————————————————————————————————————————————
-
-def compute_score(job, skills, target_titles, min_salary, prefs):
-    try:
-        if not job:
-            return 0.0
-
-        # support dict/Series/other
-        def safe_get(obj, key, default=""):
-            try:
-                if hasattr(obj, "get"):
-                    v = obj.get(key, default)
-                elif isinstance(obj, dict):
-                    v = obj[key] if key in obj else default
-                else:
-                    return default
-                return v if v is not None else default
-            except:
-                return default
-
-        title = str(safe_get(job, "title", ""))
-        company = str(safe_get(job, "company", ""))
-        location = str(safe_get(job, "location", ""))
-        salary = safe_get(job, "salary_max", 0)
-        date_posted = safe_get(job, "date_posted", "")
-
-        combo = f"{title} {company} {location}"
-
-        score = 0
-        score += title_score(title, target_titles)
-        score += skills_score(combo, skills)
-        score += salary_score(salary, min_salary)
-        score += location_score(location, prefs)
-        score += recency_score(date_posted)
-
-        return round(min(score, 100), 1)
-
-    except:
-        return 0.0
-
-
-### ————————————————————————————————————————————
-### SECTION 4 — IMPACT RANK
-### ————————————————————————————————————————————
-
-IMPACT_KEYWORDS = {
-    "ml": ["machine learning","ml","deep learning","pytorch","tensorflow","llm","transformer","mlops"],
-    "ds": ["data science","analysis","forecast","classification","regression","feature engineering","modeling"],
-    "ai": ["llm","gpt","nlp","gen ai","computer vision","transformer"],
-    "eng": ["data engineer","analytics engineer","etl","pipeline","dbt","airflow","spark","sql"]
-}
-
-def impact_rank(text):
-    t = normalize(text)
-    scores = {k:0 for k in IMPACT_KEYWORDS}
-    for area, keys in IMPACT_KEYWORDS.items():
-        for kw in keys:
-            if kw in t:
-                scores[area]+=1
-    total = sum(scores.values()) or 1
-    for k in scores:
-        scores[k] = round(100*scores[k]/total,1)
-    primary = max(scores, key=lambda x: scores[x])
-    return primary, scores
-
-
-### ————————————————————————————————————————————
-### SECTION 5 — RECRUITER EMAIL DETECTOR
-### ————————————————————————————————————————————
-
-EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
-
-def detect_emails_from_url(url):
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=10)
-        if r.status_code != 200:
-            return []
-        soup = BeautifulSoup(r.text, "html.parser")
-        text = soup.get_text(" ")
-        return list(set(EMAIL_RE.findall(text)))
-    except:
+        return jobs
+    except Exception as e:
+        st.error(f"Job API error: {e}")
         return []
 
+# ---------------------------
+# Twilio WhatsApp notifier
+# ---------------------------
+def send_whatsapp(msg):
+    tw = st.secrets.get("twilio", {})
+    sid = tw.get("account_sid"); token = tw.get("auth_token")
+    from_ = tw.get("from_whatsapp"); to_ = tw.get("to_whatsapp")
+    if not sid or not token or not from_ or not to_:
+        st.info("Twilio creds missing — cannot send WhatsApp.")
+        return False, "Twilio not configured"
+    try:
+        client = TwilioClient(sid, token)
+        message = client.messages.create(body=msg, from_=from_, to=to_)
+        return True, message.sid
+    except Exception as e:
+        return False, str(e)
 
-### ————————————————————————————————————————————
-### SECTION 6 — RESUME SNIPPETS
-### ————————————————————————————————————————————
+# ---------------------------
+# Google Sheet logging
+# ---------------------------
+def log_to_sheet(row):
+    try:
+        if worksheet:
+            # ensure header exists - create if empty
+            header = worksheet.row_values(1)
+            if not header:
+                headers = ["UID","Applied On","Job Title","Company","Location","Salary (LPA)","Role Category","Apply Link","Source","Skill Match (%)","Score","Notes","Status"]
+                worksheet.append_row(headers)
+            worksheet.append_row(row)
+            return True, None
+        return False, "Worksheet not available"
+    except Exception as e:
+        return False, str(e)
 
-def generate_snippets(jt):
-    t = normalize(jt)
-    techs = [k for k in ["python","sql","power bi","aws","nlp","scikit-learn","streamlit"] if k in t]
-    techs = ", ".join(techs[:4]) or "Python, SQL"
+# ---------------------------
+# Streamlit UI
+# ---------------------------
+st.title("JobBot+ — Job Search & Application Assistant")
+st.sidebar.header("JobBot Controls")
 
-    return [
-        f"Built ML pipelines using {techs}, improving planning accuracy by 20-25%.",
-        f"Developed forecasting and classification models to enhance operational decision-making.",
-        f"Delivered end-to-end automation using Streamlit/AWS to reduce manual reporting."
-    ]
+with st.sidebar.expander("Search & Filters", expanded=True):
+    q = st.text_input("Job keyword", value="Data Scientist")
+    location = st.text_input("Location (city or Remote)", value="India")
+    min_salary = st.number_input("Min Salary (LPA)", value=24.0, step=0.5)
+    pages = st.slider("Pages to fetch", 1, 3, 1)
+    auto_whatsapp = st.checkbox("Enable WhatsApp alerts for high-match jobs", value=False)
 
+st.sidebar.header("Profile")
+uploaded_resume = st.file_uploader("Upload your Resume (PDF or TXT)", type=["pdf","txt"], key="resume_u")
+user_skills_input = st.text_area("Your key skills (comma separated) — used for matching", value="Python, SQL, Power BI, Forecasting, ML, Streamlit")
+if user_skills_input:
+    USER_SKILLS = [s.strip().lower() for s in user_skills_input.split(",") if s.strip()]
 
-### ————————————————————————————————————————————
-### SECTION 7 — MINI PROJECT SUGGESTIONS
-### ————————————————————————————————————————————
-
-PROJECTS = {
-    "forecast": "Time-Series Forecasting Engine with ARIMA/Prophet",
-    "nlp": "Customer Feedback NLP + Sentiment Classifier",
-    "mlops": "Dockerized ML Model + CI Pipeline"
-}
-
-def suggest_projects(text):
-    t = normalize(text)
-    out = [v for k,v in PROJECTS.items() if k in t]
-    if not out:
-        out = ["Time-Series Forecasting Engine", "NLP Sentiment Classifier"]
-    return out
-
-
-### ————————————————————————————————————————————
-### SECTION 8 — INTERVIEW ANSWERS
-### ————————————————————————————————————————————
-
-def interview_tell():
-    return "I’m Vikrant, an Applied Data Scientist & Analytics Engineer working across Python, SQL, ML pipelines and forecasting."
-
-def interview_exp():
-    return "My predictive maintenance model used engineered features + ROC-AUC selection and deployed via Streamlit."
-
-def interview_hire():
-    return "Hire me because I deliver end-to-end DS/ML systems that directly reduce manual effort and improve planning."
-
-
-### ————————————————————————————————————————————
-### SECTION 9 — UI
-### ————————————————————————————————————————————
-
-logo = load_logo_base64()
-if logo:
-    st.markdown(f"<div style='text-align:center'><img src='data:image/png;base64,{logo}' width='250'></div>", unsafe_allow_html=True)
-
-st.title("JobBot (Data Scientist & Analytics)")
-
-
-### OPTIONS
-st.sidebar.header("Filters")
-keywords = st.sidebar.text_input("Job Title", "Applied Data Scientist")
-location = st.sidebar.text_input("Location", "Mumbai, Pune, Remote")
-pages = st.sidebar.slider("Pages to search", 1, 5, 1)
-min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
-min_inr = int(min_salary * 100000)
-
-use_indeed = st.sidebar.checkbox("Include Indeed", False)
-
-skills_list = ["python","sql","power bi","forecasting","nlp","streamlit"]
-target_titles = ["Data Scientist", "Applied Data Scientist", "ML Engineer", "Analytics Engineer"]
-prefs = [x.strip() for x in location.split(",")]
-
-
-### FETCH BUTTON
+st.sidebar.markdown("---")
 if st.sidebar.button("Fetch Jobs"):
-    jobs = aggregate_jobs(keywords, location, pages, use_indeed)
+    with st.spinner("Fetching jobs..."):
+        jobs = fetch_jobs_rapidapi(q, location, pages)
+        if not jobs:
+            st.warning("No jobs fetched — check RapidAPI key or network. Using simulated results.")
+            # simulated example
+            jobs = [
+                {"title":"Data Scientist","company":"ZS Associates","location":"Mumbai","salary":"31.5 LPA","description":"Forecasting, Python, SQL, Prophet","apply_link":"https://remotefront.com"},
+                {"title":"Decision Scientist","company":"Federal Express","location":"Mumbai","salary":"27.5 LPA","description":"ML, Python, feature engineering","apply_link":"https://fedex.example"}
+            ]
+        st.session_state["jobs_list"] = jobs
+        st.success(f"{len(jobs)} jobs loaded")
 
-    cleaned = []
-    for j in jobs:
-        if not j:
-            continue
-        job = dict(j) if isinstance(j, dict) else j
+jobs_list = st.session_state.get("jobs_list", [])
 
-        job["job_id"] = hashlib.md5((str(job.get("title","")) + str(job.get("company",""))).encode()).hexdigest()[:8]
-        combo = f"{job.get('title','')} {job.get('company','')} {job.get('location','')}"
-        job["score"] = compute_score(job, skills_list, target_titles, min_inr, prefs)
-        job["impact_primary"], job["impact_scores"] = impact_rank(combo)
+# Display job table with scoring
+if jobs_list:
+    df_rows = []
+    for idx, job in enumerate(jobs_list):
+        score, skill_score, sal_lpa, hits = compute_job_score(job)
+        cls, _ = classify_job(" ".join([job.get("title",""), job.get("description","")]))
+        df_rows.append({
+            "idx": idx,
+            "title": job.get("title"),
+            "company": job.get("company"),
+            "location": job.get("location"),
+            "salary_lpa": sal_lpa,
+            "skill_match": skill_score,
+            "score": score,
+            "category": cls,
+            "apply_link": job.get("apply_link")
+        })
+    df = pd.DataFrame(df_rows)
+    st.subheader("Jobs — ranked")
+    st.dataframe(df.sort_values("score", ascending=False).reset_index(drop=True), use_container_width=True)
 
-        cleaned.append(job)
+    st.markdown("---")
+    st.subheader("Actions — select a job")
+    sel = st.number_input("Select job index (from table)", min_value=0, max_value=len(df_rows)-1, value=0, step=1)
 
-    if cleaned:
-        df = pd.DataFrame(cleaned).sort_values("score", ascending=False)
-        st.session_state["jobs"] = df
-        st.success(f"Found {len(df)} jobs.")
-    else:
-        st.error("No jobs found.")
+    job = jobs_list[int(sel)]
+    st.markdown(f"### {job.get('title')} — {job.get('company')} — {job.get('location')}")
+    st.write(job.get("description"))
+    st.markdown(f"**Apply:** {job.get('apply_link')}")
 
+    # detect emails
+    emails = detect_emails(" ".join([job.get("title",""), job.get("description",""), job.get("apply_link","")]))
+    st.write("Detected emails:", emails or "None found")
 
-### DISPLAY JOBS
-df = st.session_state.get("jobs")
-if df is not None and not df.empty:
-    st.subheader("Top Matches")
-    st.dataframe(df.head(50), height=350)
+    # generate snippet
+    score, skill_score, sal_lpa, hits = compute_job_score(job)
+    st.markdown("### Resume Snippet (Tailored)")
+    snippet = generate_resume_snippet(job.get("title"), job.get("company"), hits)
+    st.code(snippet)
 
-    for _, row in df.head(20).iterrows():
-        st.markdown(f"## {row['title']} — {row['company']}")
-        st.write(f"Score: {row['score']} | Impact: {row['impact_primary']}")
-        st.write(f"Location: {row['location']} | Salary: {row['salary_max']}")
-        st.write(f"[Apply Link]({row['apply_link']})")
+    st.markdown("### Interview Answer Generator")
+    answers = interview_answers(job.get("title"), job.get("description"))
+    for k,v in answers.items():
+        st.write(f"**{k.replace('_',' ').title()}**")
+        st.write(v)
 
-        c1, c2, c3, c4, c5 = st.columns(5)
+    st.markdown("### Skill-gap & Mini-project")
+    _, user_hits = skill_match_score(" ".join([job.get("title",""), job.get("description","")]), USER_SKILLS)
+    missing = [s for s in ["nlp","fastapi","docker","kubernetes","lstm","pytorch","tensorflow"] if s not in user_hits]
+    st.write("Missing skills detected:", missing[:5] or "None")
+    st.write(mini_project_suggestion(missing))
 
-        if c1.button("Emails", key=f"em{row['job_id']}"):
-            st.write(detect_emails_from_url(row["apply_link"]))
-
-        if c2.button("Snippets", key=f"sn{row['job_id']}"):
-            st.write(generate_snippets(row["title"]))
-
-        if c3.button("Projects", key=f"pj{row['job_id']}"):
-            st.write(suggest_projects(row["title"]))
-
-        if c4.button("Interview", key=f"in{row['job_id']}"):
-            st.write(interview_tell())
-            st.write(interview_exp())
-            st.write(interview_hire())
-
-        if c5.button("Log", key=f"gs{row['job_id']}"):
-            sh = google_sheet()
-            if sh:
-                sh.append_row([
-                    row["job_id"],
-                    datetime.utcnow().isoformat(),
-                    row["title"],
-                    row["company"],
-                    row["location"],
-                    row["score"],
-                    row["impact_primary"],
-                    row["apply_link"]
-                ])
-                st.success("Saved to Google Sheet")
+    # buttons: log, auto-apply (simulated), whatsapp
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("Log to Google Sheet"):
+            row = [
+                uid(),
+                datetime.now().isoformat(),
+                job.get("title"),
+                job.get("company"),
+                job.get("location"),
+                sal_lpa,
+                classify_job(job.get("title")+ " " + job.get("description"))[0],
+                job.get("apply_link"),
+                "RapidAPI",
+                skill_score,
+                score,
+                "; ".join(emails),
+                "Logged"
+            ]
+            ok, err = log_to_sheet(row)
+            if ok:
+                st.success("Logged to Google Sheet")
             else:
-                st.error("Google Sheet not configured.")
+                st.error(f"Log failed: {err}")
 
-        st.markdown("---")
+    with col2:
+        if st.button("Generate Resume bullet and Copy"):
+            st.success("Snippet ready — copy it into your resume")
 
+        if st.button("Simulate Auto-Apply"):
+            # simulation: open link in a new tab (can't actually apply)
+            st.info("Auto-apply simulated. Use manual apply link to complete application.")
+            # log as applied
+            row = [
+                uid(),
+                datetime.now().isoformat(),
+                job.get("title"),
+                job.get("company"),
+                job.get("location"),
+                sal_lpa,
+                classify_job(job.get("title")+ " " + job.get("description"))[0],
+                job.get("apply_link"),
+                "RapidAPI",
+                skill_score,
+                score,
+                "Auto-Apply-Simulated",
+                "Applied"
+            ]
+            ok, err = log_to_sheet(row)
+            if ok:
+                st.success("Simulated apply logged")
 
-### FOOTER
-st.markdown("<hr><center>JobBot+ Full Edition — Built for Vikrant</center>", unsafe_allow_html=True)
+    with col3:
+        if st.button("Send WhatsApp Alert (if >=80)"):
+            if score >= 80:
+                msg = (f"High-match job!\n{job.get('title')} at {job.get('company')}\nSalary: {sal_lpa} LPA\nScore: {score}\nLink: {job.get('apply_link')}")
+                ok, resp = send_whatsapp(msg)
+                if ok:
+                    st.success("WhatsApp sent")
+                else:
+                    st.error(f"WhatsApp failed: {resp}")
+            else:
+                st.info("Job score below threshold (80). No WhatsApp sent.")
 
-
+st.markdown("---")
+st.caption("JobBot+ v1 — Hybrid. Built for Vikrant. Extend with the Chrome 'Scan Job' extension by posting job JSON to your JobBot endpoint.")
