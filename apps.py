@@ -15,27 +15,24 @@ from twilio.rest import Client as TwilioClient
 import tldextract
 from dateutil import parser as dateparser
 
-st.set_page_config(page_title="JobBot", layout="wide")
-
 # ---------------------------
-# LOGO LOADER
+# LOGO + MAIN TITLE (FINAL)
 # ---------------------------
 def load_logo_base64():
     try:
-        logo = Image.open("vt_logo.png")  # keep this in your repo root
+        logo = Image.open("vt_logo.png")  # keep this file in your repo root
         buf = BytesIO()
         logo.save(buf, format="PNG")
         return base64.b64encode(buf.getvalue()).decode()
     except:
         return None
 
-st.title("JobBot+ — Hybrid")
-
+# Display centered logo
 logo_b64 = load_logo_base64()
 if logo_b64:
     st.markdown(
         f"""
-        <div style='text-align:center; margin-bottom:10px;'>
+        <div style='text-align:center; margin-top:-20px; margin-bottom:10px;'>
             <img src='data:image/png;base64,{logo_b64}' width='260'>
         </div>
         """,
@@ -43,6 +40,13 @@ if logo_b64:
     )
 else:
     st.info("Logo not found — upload vt_logo.png to project root.")
+
+# MAIN title — your ONLY title
+st.markdown(
+    "<h1 style='text-align:center; margin-top:-10px;'>JobBot+ — Job Search & Application Assistant</h1>",
+    unsafe_allow_html=True
+)
+
 
 # ---------------------------
 # GOOGLE SHEETS LOADER
@@ -332,3 +336,4 @@ if jobs_list:
             st.info("Below 80 — Not sending")
 
 st.caption("JobBot+ v1 — Hybrid Edition.")
+
