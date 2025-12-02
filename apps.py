@@ -15,6 +15,8 @@ from twilio.rest import Client as TwilioClient
 import tldextract
 from dateutil import parser as dateparser
 
+st.set_page_config(page_title="JobBot+", layout="wide")
+
 # ---------------------------
 # LOGO + MAIN TITLE (FINAL)
 # ---------------------------
@@ -332,5 +334,6 @@ if jobs_list:
             st.info("Below 80 — Not sending")
 
 st.caption("JobBot+ v1 — Hybrid Edition.")
+
 
 
