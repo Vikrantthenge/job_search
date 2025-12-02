@@ -361,4 +361,115 @@ if jobs_list:
         else:
             st.info("Below 80 — Not sending")
 
+# -------------------------------------------------------
+# RESUME REWRITER MODULE
+# -------------------------------------------------------
+st.markdown("---")
+st.subheader("Resume Bullet Rewriter")
+
+bullet_input = st.text_area(
+    "Paste a resume bullet you want rewritten:",
+    placeholder="Example: Built Power BI dashboards to track sales performance…",
+    height=120
+)
+
+def rewrite_bullet(text):
+    if not text:
+        return ""
+
+    return {
+        "impact": (
+            "• " + text.replace("I ", "")
+            .replace("my ", "")
+            + " — delivered measurable improvements in accuracy, speed, and decision making."
+        ),
+
+        "technical": (
+            "• Engineered and automated workflows using Python, SQL, and Power BI — "
+            "enhancing model reliability and reducing manual work."
+        ),
+
+        "short": (
+            "• Delivered analytics solutions using Python, SQL, and BI tools to improve efficiency."
+        )
+    }
+
+
+if st.button("Rewrite Bullet"):
+    if not bullet_input.strip():
+        st.warning("Please paste a bullet.")
+    else:
+        out = rewrite_bullet(bullet_input)
+
+        st.write("### Impact Version")
+        st.code(out["impact"])
+
+        st.write("### Technical Version")
+        st.code(out["technical"])
+
+        st.write("### Short Version")
+        st.code(out["short"])
+
+
+
+# -------------------------------------------------------
+# RESUME UPLOAD + REWRITE (SIMPLE)
+# -------------------------------------------------------
+st.markdown("---")
+st.subheader("Upload Resume → Rewrite → Download")
+
+uploaded_resume = st.file_uploader(
+    "Upload your resume (PDF or TXT)",
+    type=["pdf","txt"],
+    key="resume_upload"
+)
+
+def extract_text_from_resume(file):
+    import PyPDF2
+
+    if file.type == "text/plain":
+        return file.read().decode("utf-8")
+
+    if file.type == "application/pdf":
+        reader = PyPDF2.PdfReader(file)
+        pages = [p.extract_text() for p in reader.pages]
+        return "\n".join(pages)
+
+    return ""
+
+
+def rewrite_resume_text(text):
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    rewritten = []
+
+    for line in lines:
+        if len(line.split()) > 4:  # treat as a bullet
+            rewritten.append("• " + line + " — improved efficiency and enabled better insights.")
+        else:
+            rewritten.append(line)
+
+    return "\n".join(rewritten)
+
+
+if uploaded_resume:
+    original = extract_text_from_resume(uploaded_resume)
+
+    st.markdown("### Extracted Resume Text")
+    st.text_area("Original Text:", original, height=200)
+
+    rewritten_resume = rewrite_resume_text(original)
+
+    st.markdown("### Rewritten Resume Text")
+    st.text_area("Rewritten Resume:", rewritten_resume, height=200)
+
+    # Download
+    st.download_button(
+        label="Download Rewritten Resume (TXT)",
+        data=rewritten_resume,
+        file_name="rewritten_resume.txt",
+        mime="text/plain"
+    )
+
+
 st.caption("JobBot+ v1 — Hybrid Edition.")
+
