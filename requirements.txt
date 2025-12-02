@@ -9,3 +9,4 @@ python-dotenv
 Pillow
 
 numpy==1.26.4
+client
