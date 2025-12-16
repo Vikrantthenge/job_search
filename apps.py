@@ -323,9 +323,20 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-    st.write("Apply Link:", selected["Apply_Link"])
+if selected.get("LinkedIn_Search"):
+    st.markdown(
+        f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",
+        unsafe_allow_html=True
+    )
+
+if selected.get("Apply_Link"):
+    st.markdown(
+        f"[🏢 Open Company Career Page]({selected['Apply_Link']})",
+        unsafe_allow_html=True
+    )
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
 
 
 
