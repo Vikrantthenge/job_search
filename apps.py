@@ -6,14 +6,18 @@ from io import BytesIO
 import base64
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
+from dateutil import parser
 import re
 import uuid
 
 # -------------------------------------------------------
 # PAGE CONFIG
 # -------------------------------------------------------
-st.set_page_config(page_title="JobBot+ | Senior Analytics Manager Mode", layout="wide")
+st.set_page_config(
+    page_title="JobBot+ | Senior Analytics Manager Mode",
+    layout="wide"
+)
 
 # -------------------------------------------------------
 # LOGO + TITLE
@@ -30,7 +34,7 @@ def load_logo_base64():
 logo_b64 = load_logo_base64()
 if logo_b64:
     st.markdown(
-        f"<div style='text-align:center;'><img src='data:image/png;base64,{logo_b64}' width='240'></div>",
+        f"<div style='text-align:center;'><img src='data:image/png;base64,{logo_b64}' width='220'></div>",
         unsafe_allow_html=True
     )
 
@@ -40,14 +44,17 @@ st.markdown(
 )
 
 # -------------------------------------------------------
-# GOOGLE SHEET
+# GOOGLE SHEET (OPTIONAL LOGGING)
 # -------------------------------------------------------
 @st.cache_resource
 def google_sheet():
-    creds = json.loads(st.secrets["google"]["service_account"])
-    gc = gspread.service_account_from_dict(creds)
-    sh = gc.open_by_url(st.secrets["google"]["sheet_url"])
-    return sh.sheet1
+    try:
+        creds = json.loads(st.secrets["google"]["service_account"])
+        gc = gspread.service_account_from_dict(creds)
+        sh = gc.open_by_url(st.secrets["google"]["sheet_url"])
+        return sh.sheet1
+    except:
+        return None
 
 worksheet = google_sheet()
 
@@ -69,17 +76,23 @@ def parse_salary_to_lpa(text):
         return round(float(m2.group(1)) / 100000, 1)
     return 0.0
 
+def job_age_days(posted_at):
+    if not posted_at:
+        return 999
+    posted = parser.parse(posted_at)
+    return (datetime.now(timezone.utc) - posted).days
+
 # -------------------------------------------------------
-# MANAGER-LEVEL SKILLS (SCORING ONLY)
+# SKILL SCORING (MANAGER-LEVEL)
 # -------------------------------------------------------
 USER_SKILLS = [
     "forecasting",
     "planning",
-    "capacity planning",
-    "scenario modeling",
+    "scenario",
     "kpi",
     "performance analytics",
     "decision analytics",
+    "capacity planning",
     "python",
     "sql",
     "power bi",
@@ -93,20 +106,18 @@ def skill_match_score(text):
     return score, hits
 
 # -------------------------------------------------------
-# ROLE CLASSIFICATION (REAL-WORLD SENIOR SAFE)
+# ROLE CLASSIFICATION
 # -------------------------------------------------------
 CLASS_KEYWORDS = {
     "manager": [
-        "senior analytics manager",
         "analytics manager",
+        "senior analytics",
         "analytics lead",
         "lead analytics",
-        "business analytics manager",
         "decision analytics",
+        "performance analytics",
         "planning",
         "forecasting",
-        "capacity planning",
-        "performance analytics",
         "kpi"
     ],
     "reject_ic": [
@@ -114,8 +125,6 @@ CLASS_KEYWORDS = {
         "machine learning",
         "deep learning",
         "nlp",
-        "classification",
-        "model development",
         "ml engineer"
     ]
 }
@@ -140,36 +149,7 @@ def compute_job_score(job):
     return final, skill_score, salary_lpa, hits
 
 # -------------------------------------------------------
-# RESUME SNIPPET (MANAGER SIGNAL)
-# -------------------------------------------------------
-def generate_resume_snippet(company):
-    return (
-        f"• Led forecasting, planning, and performance analytics initiatives "
-        f"supporting leadership decision-making at {company}.\n"
-        "• Built KPI frameworks and automated analytics workflows to improve "
-        "planning accuracy and decision turnaround."
-    )
-
-# -------------------------------------------------------
-# INTERVIEW ANSWERS
-# -------------------------------------------------------
-def interview_answers(job_title):
-    return {
-        "Tell me about yourself":
-            "I lead decision analytics, forecasting, and planning initiatives "
-            "that support leadership decisions in operations-heavy environments.",
-
-        "Why hire you":
-            "I bring ownership across forecasting, KPI frameworks, and decision support "
-            "rather than isolated model building.",
-
-        "Core strengths":
-            "Forecasting, scenario modeling, KPI design, and analytics automation.",
-
-        "Role fit":
-            f"This role aligns with my experience in senior analytics and decision planning."
-    }
-
+# RAPIDAPI FETCH
 # -------------------------------------------------------
 def fetch_jobs(query, location_query, pages):
     url = "https://jsearch.p.rapidapi.com/search"
@@ -205,30 +185,70 @@ def fetch_jobs(query, location_query, pages):
 
     return jobs
 
+# -------------------------------------------------------
+# SIDEBAR — SEARCH CONTROLS
+# -------------------------------------------------------
+st.sidebar.header("Senior Analytics Filters")
+
+q = st.sidebar.text_input(
+    "Job keyword",
+    "analytics manager"
+)
+
+st.sidebar.subheader("Search Relevance")
+
+time_window = st.sidebar.radio(
+    "Posted within",
+    ["Last 24 hours", "Last 3 days", "Last 7 days"],
+    index=2
+)
+
+WINDOW_MAP = {
+    "Last 24 hours": 1,
+    "Last 3 days": 3,
+    "Last 7 days": 7
+}
+max_days = WINDOW_MAP[time_window]
+
+st.sidebar.subheader("Location")
+
+locations = st.sidebar.multiselect(
+    "Select locations",
+    ["India", "Mumbai", "Bengaluru", "Pune", "Hyderabad", "Chennai", "Remote"],
+    default=["India"]
+)
+
+location_query = " OR ".join(locations)
+
+min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
+pages = st.sidebar.slider("Pages", 1, 3, 1)
 
 # -------------------------------------------------------
-# FETCH JOBS
+# FETCH + FILTER
 # -------------------------------------------------------
 if st.sidebar.button("Fetch Jobs"):
-    jobs = fetch_jobs(q, location, pages)
+    jobs = fetch_jobs(q, location_query, pages)
     filtered = []
 
     for job in jobs:
+        age = job_age_days(job.get("posted_at"))
+        if age > max_days:
+            continue
+
         role = classify_job(job["title"] + job["description"])
         if role == "reject":
             continue
 
         score, skill, sal, hits = compute_job_score(job)
 
-        # IMPORTANT: keep missing salary jobs
         if sal > 0 and sal < min_salary:
             continue
-
 
         filtered.append({
             **job,
             "score": score,
-            "salary_lpa": sal
+            "salary_lpa": sal,
+            "age_days": age
         })
 
     st.session_state["jobs"] = filtered
@@ -241,28 +261,17 @@ jobs = st.session_state.get("jobs", [])
 
 if jobs:
     df = pd.DataFrame(jobs).sort_values("score", ascending=False)
-    st.dataframe(df[["title","company","location","salary_lpa","score"]], use_container_width=True)
 
-    idx = st.number_input("Select job index", 0, len(jobs)-1, 0)
+    st.dataframe(
+        df[["title", "company", "location", "age_days", "salary_lpa", "score"]],
+        use_container_width=True
+    )
+
+    idx = st.number_input("Select job index", 0, len(jobs) - 1, 0)
     job = jobs[idx]
 
     st.markdown(f"## {job['title']} — {job['company']}")
     st.write(job["description"])
     st.write("Apply:", job["apply_link"])
 
-    st.markdown("### Resume Snippet")
-    st.code(generate_resume_snippet(job["company"]))
-
-    st.markdown("### Interview Prep")
-    for q,a in interview_answers(job["title"]).items():
-        st.write(f"**{q}**")
-        st.write(a)
-
 st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
-
-
-
-
-
-
-
