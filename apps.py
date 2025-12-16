@@ -306,10 +306,7 @@ if jobs:
         st.markdown(
             f"[🏢 Open Company Career Page]({selected['Apply_Link']})",
             unsafe_allow_html=True
-        )
-
-        use_container_width=True
-    )
+        ) use_container_width=True
 
     st.markdown("### Job Details")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
@@ -329,6 +326,7 @@ st.markdown(
     st.write("Apply Link:", selected["Apply_Link"])
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
 
 
 
