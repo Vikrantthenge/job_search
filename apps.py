@@ -299,7 +299,7 @@ if jobs:
 
     if selected.get("LinkedIn_Search"):
         st.markdown(
-            f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",
+            f"[🔍 Open LinkedIn Search]({selected.get("LinkedIn_Search")']})",
             unsafe_allow_html=True
         )
 
@@ -336,6 +336,7 @@ if selected.get("Apply_Link"):
     )
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
 
 
 
