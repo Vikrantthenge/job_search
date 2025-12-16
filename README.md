@@ -1,56 +1,82 @@
-# 🔍 Job Search Match
+# 🔍 Job Search Match (Manager Mode)
 
-**Smart Resume-to-Job Matching App — Built for Recruiters, Job Seekers, and Career Strategists**
+**Decision-Focused Job Discovery & Filtering App — Built for Senior Analytics Roles**
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://jobsearchmatch.streamlit.app/)
 
 ---
 
-### 🏷️ Badge Row: Tech Stack & App Status
+## 🏷️ Tech Stack & App Status
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)
-![Streamlit](https://img.shields.io/badge/Streamlit-app-red?logo=streamlit)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-TF--IDF-orange?logo=scikit-learn)
-![NLP](https://img.shields.io/badge/NLP-Cosine_Similarity-green)
+![Streamlit](https://img.shields.io/badge/Streamlit-App-red?logo=streamlit)
 ![Status](https://img.shields.io/badge/Status-Live-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-![Smart Salary Filter](https://img.shields.io/badge/Salary%20Filter-Smart%20Toggle%20%2B%20Histogram-8B0000)
+![Salary Filter](https://img.shields.io/badge/Salary%20Filter-24%2B%20LPA%20Focused-8B0000)
+![Role Filter](https://img.shields.io/badge/Role%20Target-Senior%20Analytics%20Manager-2F4F4F)
 
 ---
 
 ## 🚀 Overview
 
-JobSearchMatch uses NLP-powered cosine similarity to instantly match resumes with job descriptions. Upload both documents and get a match score with keyword breakdowns — all in seconds.
+**Job Search Match** is a decision-oriented job discovery and filtering application designed to surface **only senior-level analytics roles**.
+
+Unlike generic job boards or resume matchers, this app prioritizes:
+- **Role seniority**
+- **Decision analytics scope**
+- **Forecasting, planning, and KPI ownership**
+- **Fixed CTC thresholds (24+ LPA)**
+
+The result: **fewer roles, higher relevance, zero noise**.
 
 ---
 
-## 🧠 Features
+## 🧠 Key Capabilities
 
-- 📄 Upload resume and job description (PDF or text)
-- 📊 Cosine similarity via TF-IDF vectorization
-- 🔍 Visual breakdown of matching keywords
-- ⚡ Fast, intuitive Streamlit interface
+- 🎯 **Manager-Only Role Filtering**  
+  Surfaces roles such as:
+  - Senior Analytics Manager  
+  - Analytics Manager  
+  - Decision Analytics / Planning roles  
+
+- 💰 **Smart Salary Intelligence (INR)**  
+  - Minimum salary threshold (LPA)
+  - Salary-weighted job ranking
+  - Fallback logic for missing salary data
+
+- 📊 **Decision-Weighted Job Scoring**  
+  Ranks jobs based on:
+  - Salary relevance
+  - Decision analytics keywords
+  - Forecasting & planning scope  
+  *(Not ML / NLP buzzwords)*
+
+- 🧾 **Application-Ready Outputs**
+  - Manager-level resume bullet suggestions
+  - Senior-safe screening answers
+  - Clean logging to Google Sheets
 
 ---
 
-### 📊 Smart Salary Filter + Histogram
+## 📊 Smart Salary Filter
 
-This app now includes a recruiter-grade salary filter with a toggle for broad search and a histogram to visualize INR salary distribution.
+Designed for **senior candidates and recruiters**, not mass applicants.
 
-- ✅ **Broad Search Toggle**: Includes jobs with missing or unspecified salary data.
-- ✅ **Minimum Salary Filter**: Set your threshold in LPA (Lakhs Per Annum).
-- ✅ **Salary Histogram**: Visualizes how many jobs report INR salaries — helps calibrate realistic expectations.
-- ✅ **Fallback Logic**: Ensures jobs aren't excluded due to missing salary fields.
+- ✅ **Minimum Fixed CTC Filter (LPA)**  
+- ✅ **Broad Search Toggle** for incomplete salary data  
+- ✅ **Salary-Weighted Ranking** (pay matters more than buzzwords)  
+- ✅ **Noise Reduction** — low-band roles automatically excluded  
 
-> This feature improves recruiter scanability and ensures high-salary roles aren't missed due to API limitations.
+> Ensures time is spent only on roles that meet senior compensation benchmarks.
 
 ---
 
 ## 💼 Use Cases
 
-- Recruiters screening candidate-job fit
-- Job seekers tailoring resumes for specific roles
-- Career coaches optimizing applications
+- Senior analytics professionals targeting **24+ LPA fixed CTC**
+- Recruiters sourcing **manager-level analytics talent**
+- Career strategists eliminating low-signal job noise
+- Analytics leaders tracking and prioritizing opportunities
 
 ---
 
@@ -58,12 +84,22 @@ This app now includes a recruiter-grade salary filter with a toggle for broad se
 
 - Python 3.10
 - Streamlit
-- scikit-learn (TF-IDF)
-- NLP (Cosine Similarity)
+- REST APIs (job ingestion)
+- Rule-based role classification
+- Salary-weighted scoring logic
+
+> Intentionally avoids heavy ML/NLP to ensure **explainability, speed, and recruiter-aligned logic**.
 
 ---
 
-## 📎 Launch Now
+## 📎 Launch & Explore
 
-👉 [Live App](https://jobsearchmatch.streamlit.app/)  
-👉 [Portfolio README](https://github.com/vikrantthenge/job_search)
+👉 **Live App:** https://jobsearchmatch.streamlit.app/  
+👉 **GitHub Repository:** https://github.com/vikrantthenge/job_search
+
+---
+
+### 🔑 Design Philosophy
+
+> Senior roles are won by **decision ownership**, not keyword density.  
+> This app is built to reflect how **real hiring decisions** are made.
