@@ -259,6 +259,7 @@ if st.sidebar.button("Fetch Jobs"):
     st.success(f"{len(final_jobs)} senior analytics leads identified")
 
 # -------------------------------------------------------
+# -------------------------------------------------------
 # DISPLAY — DECISION FIRST
 # -------------------------------------------------------
 jobs = st.session_state.get("jobs", [])
@@ -296,7 +297,7 @@ if jobs:
     st.write("**Verification Status:**", selected.get("Verification_Status"))
     st.write("**Recommended Action:**", selected.get("Action"))
 
-    if "LinkedIn_Search" in selected:
+    if selected.get("LinkedIn_Search"):
         st.markdown(
             f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",
             unsafe_allow_html=True
@@ -306,10 +307,10 @@ if jobs:
         st.markdown(
             f"[🏢 Open Company Career Page]({selected['Apply_Link']})",
             unsafe_allow_html=True
+        )
 
-    st.markdown("### Job Details")
-    idx = st.number_input("Select row", 0, len(df) - 1, 0)
-    selected = df.iloc[idx]
+
+
 
     st.write("**Title:**", selected["Title"])
     st.write("**Company:**", selected["Company"])
@@ -325,6 +326,7 @@ st.markdown(
     st.write("Apply Link:", selected["Apply_Link"])
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
 
 
 
