@@ -179,11 +179,12 @@ def fetch_jobs(query, location, pages):
         "X-RapidAPI-Key": st.secrets["rapidapi"]["key"],
         "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
     }
+location_query = " OR ".join(locations)
+
   params = {
     "query": f"{query} ({location_query})",
     "num_pages": pages
 }
-
 
     r = requests.get(url, headers=headers, params=params)
 
@@ -292,6 +293,7 @@ if jobs:
         st.write(a)
 
 st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
+
 
 
 
