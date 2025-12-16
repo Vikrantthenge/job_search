@@ -308,7 +308,6 @@ if jobs:
             unsafe_allow_html=True
         )
 
-,
         use_container_width=True
     )
 
@@ -330,6 +329,7 @@ st.markdown(
     st.write("Apply Link:", selected["Apply_Link"])
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
 
 
 
