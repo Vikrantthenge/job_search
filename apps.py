@@ -4,6 +4,10 @@ import pandas as pd
 from datetime import datetime, timezone
 from dateutil import parser
 import re
+from PIL import Image
+from io import BytesIO
+import base64
+
 
 # -------------------------------------------------------
 # PAGE CONFIG
@@ -13,8 +17,39 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("JobBot+ — Senior Analytics / Group Manager Radar")
+def load_logo_base64(path="vt_logo.png"):
+    try:
+        img = Image.open(path)
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode()
+    except:
+        return None
+
+logo_b64 = load_logo_base64()
+
+if logo_b64:
+    st.markdown(
+        f"""
+        <div style="text-align:center; margin-bottom:6px;">
+            <img src="data:image/png;base64,{logo_b64}" width="160">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+st.markdown(
+    "<h2 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Group Manager Radar</h2>",
+    unsafe_allow_html=True
+)
+
+st.caption(
+    "Job APIs are unreliable for freshness. This tool is a discovery and decision system, not an application engine."
+)
 st.caption("⚠️ Job APIs are unreliable for freshness. This tool is a discovery + decision system.")
+
+st.markdown("---")
+
 
 # -------------------------------------------------------
 # UTILITIES
@@ -264,3 +299,4 @@ if jobs:
     st.write("**Apply Link:**", selected["Apply_Link"])
 
 st.caption("JobBot+ — Senior-level radar. Use judgment. Apply selectively.")
+
