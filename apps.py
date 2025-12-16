@@ -291,7 +291,9 @@ if jobs:
     st.write("**Posted Date (raw):**", selected["Posted_Date"])
     st.write("**Verification Status:**", selected["Verification_Status"])
     st.write("**Recommended Action:**", selected["Action"])
-    st.write("🔗 **LinkedIn Search:**", selected["LinkedIn_Search"])
+    st.markdown(f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",unsafe_allow_html=True
+)
     st.write("Apply Link:", selected["Apply_Link"])
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
