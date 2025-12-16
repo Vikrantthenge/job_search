@@ -215,17 +215,23 @@ q = st.sidebar.text_input(
     "Job keyword",
     "analytics manager india"
 )
+
 st.sidebar.subheader("Search Relevance")
 
-max_days = st.sidebar.radio(
+time_window = st.sidebar.radio(
     "Posted within",
-    options=[
-        (Last 24 hours),
-        (Last 3 days"),
-        (Last 7 days)
-    ],
+    ["Last 24 hours", "Last 3 days", "Last 7 days"],
     index=2
-)[1]
+)
+
+WINDOW_MAP = {
+    "Last 24 hours": 1,
+    "Last 3 days": 3,
+    "Last 7 days": 7
+}
+
+max_days = WINDOW_MAP[time_window]
+
 
 
 location = st.sidebar.text_input("Location", "India")
@@ -285,6 +291,7 @@ if jobs:
         st.write(a)
 
 st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
+
 
 
 
