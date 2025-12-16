@@ -215,6 +215,18 @@ q = st.sidebar.text_input(
     "Job keyword",
     "analytics manager india"
 )
+st.sidebar.subheader("Search Relevance")
+
+max_days = st.sidebar.radio(
+    "Posted within",
+    options=[
+        ("Last 24 hours", 1),
+        ("Last 3 days", 3),
+        ("Last 7 days", 7)
+    ],
+    index=2
+)[1]
+
 
 location = st.sidebar.text_input("Location", "India")
 min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
@@ -273,4 +285,5 @@ if jobs:
         st.write(a)
 
 st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
+
 
