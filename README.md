@@ -19,53 +19,65 @@
 
 ## 🚀 Overview
 
-**Job Search Match** is a decision-oriented job discovery and filtering application designed to surface **only senior-level analytics roles**.
+**Job Search Match (Manager Mode)** is a **decision-oriented job discovery and filtering application** built specifically to surface **senior-level analytics roles**.
 
-Unlike generic job boards or resume matchers, this app prioritizes:
-- **Role seniority**
-- **Decision analytics scope**
-- **Forecasting, planning, and KPI ownership**
-- **Fixed CTC thresholds (24+ LPA)**
+Unlike generic job boards or resume matchers, this app is designed around how **real senior hiring works**:
 
-The result: **fewer roles, higher relevance, zero noise**.
+- Role seniority matters more than tools  
+- Decision ownership matters more than dashboards  
+- Compensation matters more than buzzwords  
+
+The outcome is intentional:  
+**fewer roles, higher relevance, zero noise**.
 
 ---
 
 ## 🧠 Key Capabilities
 
-- 🎯 **Manager-Only Role Filtering**  
-  Surfaces roles such as:
-  - Senior Analytics Manager  
-  - Analytics Manager  
-  - Decision Analytics / Planning roles  
+### 🎯 Manager-Only Role Filtering  
+Surfaces only roles aligned to senior accountability, such as:
+- Senior Analytics Manager  
+- Analytics / Performance Analytics Manager  
+- Decision Analytics, Planning, or Risk Analytics roles  
 
-- 💰 **Smart Salary Intelligence (INR)**  
-  - Minimum salary threshold (LPA)
-  - Salary-weighted job ranking
-  - Fallback logic for missing salary data
-
-- 📊 **Decision-Weighted Job Scoring**  
-  Ranks jobs based on:
-  - Salary relevance
-  - Decision analytics keywords
-  - Forecasting & planning scope  
-  *(Not ML / NLP buzzwords)*
-
-- 🧾 **Application-Ready Outputs**
-  - Manager-level resume bullet suggestions
-  - Senior-safe screening answers
-  - Clean logging to Google Sheets
+Hard-rejects IC-heavy or tool-centric roles (Data Scientist, ML Engineer, etc.).
 
 ---
 
-## 📊 Smart Salary Filter
+### 💰 Smart Salary Intelligence (INR)  
+Designed for senior compensation realities:
+- Minimum fixed CTC threshold (LPA)  
+- Salary-weighted ranking (pay > keywords)  
+- Fallback logic for missing or vague salary data  
 
-Designed for **senior candidates and recruiters**, not mass applicants.
+---
 
-- ✅ **Minimum Fixed CTC Filter (LPA)**  
-- ✅ **Broad Search Toggle** for incomplete salary data  
-- ✅ **Salary-Weighted Ranking** (pay matters more than buzzwords)  
-- ✅ **Noise Reduction** — low-band roles automatically excluded  
+### 📊 Decision-Weighted Job Scoring  
+Jobs are ranked based on:
+- Salary relevance  
+- Decision analytics scope  
+- Forecasting, planning, KPI ownership  
+
+Explicitly **not** optimized for ML/NLP buzzwords or ATS keyword density.
+
+---
+
+### 🧾 Application-Ready Outputs  
+The app supports senior execution by providing:
+- Manager-level resume bullet signals  
+- Senior-safe screening answers  
+- Clean job logging for tracking and follow-up  
+
+---
+
+## 📊 Smart Salary Filter (Senior-Grade)
+
+Built for **senior candidates and recruiters**, not mass applicants.
+
+- ✅ Minimum Fixed CTC Filter (24+ LPA)  
+- ✅ Broad search support for incomplete salary data  
+- ✅ Salary-weighted ranking logic  
+- ✅ Automatic exclusion of low-band roles  
 
 > Ensures time is spent only on roles that meet senior compensation benchmarks.
 
@@ -75,31 +87,33 @@ Designed for **senior candidates and recruiters**, not mass applicants.
 
 - Senior analytics professionals targeting **24+ LPA fixed CTC**
 - Recruiters sourcing **manager-level analytics talent**
-- Career strategists eliminating low-signal job noise
-- Analytics leaders tracking and prioritizing opportunities
+- Career strategists reducing low-signal job noise
+- Analytics leaders tracking and prioritizing real opportunities
 
 ---
 
 ## 🛠️ Tech Stack
 
-- Python 3.10
-- Streamlit
-- REST APIs (job ingestion)
-- Rule-based role classification
-- Salary-weighted scoring logic
+- Python 3.10  
+- Streamlit  
+- REST APIs for job ingestion  
+- Rule-based role classification  
+- Salary-weighted scoring logic  
 
-> Intentionally avoids heavy ML/NLP to ensure **explainability, speed, and recruiter-aligned logic**.
+> Heavy ML/NLP is intentionally avoided to ensure **clarity, explainability, and alignment with recruiter decision-making**.
 
 ---
 
 ## 📎 Launch & Explore
 
 👉 **Live App:** https://jobsearchmatch.streamlit.app/  
-👉 **GitHub Repository:** https://github.com/vikrantthenge/job_search
+👉 **GitHub Repository:** https://github.com/vikrantthenge/job_search  
 
 ---
 
-### 🔑 Design Philosophy
+## 🔑 Design Philosophy
 
-> Senior roles are won by **decision ownership**, not keyword density.  
-> This app is built to reflect how **real hiring decisions** are made.
+> Senior roles are won through **decision ownership**, not keyword density.  
+> This app mirrors how **actual hiring decisions** are made — not how job boards pretend they are.
+
+---
