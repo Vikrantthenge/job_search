@@ -263,9 +263,7 @@ if st.sidebar.button("Fetch Jobs"):
 # -------------------------------------------------------
 jobs = st.session_state.get("jobs", [])
 
-
-    st.dataframe(
-     if jobs:
+if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
     expected_cols = [
@@ -309,6 +307,7 @@ jobs = st.session_state.get("jobs", [])
             f"[🏢 Open Company Career Page]({selected['Apply_Link']})",
             unsafe_allow_html=True
         )
+
 ,
         use_container_width=True
     )
@@ -331,6 +330,7 @@ st.markdown(
     st.write("Apply Link:", selected["Apply_Link"])
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
 
 
 
