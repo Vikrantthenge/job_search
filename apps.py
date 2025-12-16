@@ -1,69 +1,24 @@
 import streamlit as st
-import json
-import gspread
-from PIL import Image
-from io import BytesIO
-import base64
 import requests
 import pandas as pd
 from datetime import datetime, timezone
 from dateutil import parser
 import re
-import uuid
 
 # -------------------------------------------------------
 # PAGE CONFIG
 # -------------------------------------------------------
 st.set_page_config(
-    page_title="JobBot+ | Senior Analytics Manager Mode",
+    page_title="JobBot+ | Senior Analytics Radar",
     layout="wide"
 )
 
-# -------------------------------------------------------
-# LOGO + TITLE
-# -------------------------------------------------------
-def load_logo_base64():
-    try:
-        logo = Image.open("vt_logo.png")
-        buf = BytesIO()
-        logo.save(buf, format="PNG")
-        return base64.b64encode(buf.getvalue()).decode()
-    except:
-        return None
-
-logo_b64 = load_logo_base64()
-if logo_b64:
-    st.markdown(
-        f"<div style='text-align:center;'><img src='data:image/png;base64,{logo_b64}' width='220'></div>",
-        unsafe_allow_html=True
-    )
-
-st.markdown(
-    "<h1 style='text-align:center;'>JobBot+ — Senior Analytics Manager Mode</h1>",
-    unsafe_allow_html=True
-)
-
-# -------------------------------------------------------
-# GOOGLE SHEET (OPTIONAL LOGGING)
-# -------------------------------------------------------
-@st.cache_resource
-def google_sheet():
-    try:
-        creds = json.loads(st.secrets["google"]["service_account"])
-        gc = gspread.service_account_from_dict(creds)
-        sh = gc.open_by_url(st.secrets["google"]["sheet_url"])
-        return sh.sheet1
-    except:
-        return None
-
-worksheet = google_sheet()
+st.title("JobBot+ — Senior Analytics / Group Manager Radar")
+st.caption("⚠️ Job APIs are unreliable for freshness. This tool is a discovery + decision system.")
 
 # -------------------------------------------------------
 # UTILITIES
 # -------------------------------------------------------
-def uid():
-    return uuid.uuid4().hex[:8]
-
 def parse_salary_to_lpa(text):
     if not text:
         return 0.0
@@ -76,80 +31,94 @@ def parse_salary_to_lpa(text):
         return round(float(m2.group(1)) / 100000, 1)
     return 0.0
 
+
 def job_age_days(posted_at):
     if not posted_at:
         return 999
-    posted = parser.parse(posted_at)
-    return (datetime.now(timezone.utc) - posted).days
+    try:
+        posted = parser.parse(posted_at)
+        return (datetime.now(timezone.utc) - posted).days
+    except:
+        return 999
+
+
+def verification_status(apply_link):
+    if not apply_link:
+        return "Needs verification"
+
+    link = apply_link.lower()
+    if "careers" in link or "jobs." in link:
+        return "Career page found"
+
+    return "Needs verification"
+
+
+def decide_action(score, verification):
+    if score >= 80 and verification == "Career page found":
+        return "Apply"
+    if score >= 70:
+        return "Recruiter outreach"
+    return "Ignore"
+
 
 # -------------------------------------------------------
-# SKILL SCORING (MANAGER-LEVEL)
+# ROLE FILTERING (SENIOR-SAFE)
 # -------------------------------------------------------
-USER_SKILLS = [
-    "forecasting",
-    "planning",
-    "scenario",
-    "kpi",
-    "performance analytics",
-    "decision analytics",
-    "capacity planning",
-    "python",
-    "sql",
-    "power bi",
-    "automation"
+REJECT_KEYWORDS = [
+    "data scientist",
+    "machine learning",
+    "deep learning",
+    "nlp",
+    "ml engineer"
 ]
 
-def skill_match_score(text):
-    t = (text or "").lower()
-    hits = [s for s in USER_SKILLS if s in t]
-    score = int(len(hits) / len(USER_SKILLS) * 100)
-    return score, hits
-
-# -------------------------------------------------------
-# ROLE CLASSIFICATION
-# -------------------------------------------------------
-CLASS_KEYWORDS = {
-    "manager": [
-        "analytics manager",
-        "senior analytics",
-        "analytics lead",
-        "lead analytics",
-        "decision analytics",
-        "performance analytics",
-        "planning",
-        "forecasting",
-        "kpi"
-    ],
-    "reject_ic": [
-        "data scientist",
-        "machine learning",
-        "deep learning",
-        "nlp",
-        "ml engineer"
-    ]
-}
+MANAGER_KEYWORDS = [
+    "analytics manager",
+    "group manager",
+    "analytics lead",
+    "decision analytics",
+    "performance analytics",
+    "business analytics manager"
+]
 
 def classify_job(text):
     t = (text or "").lower()
-    if any(k in t for k in CLASS_KEYWORDS["reject_ic"]):
+    if any(k in t for k in REJECT_KEYWORDS):
         return "reject"
-    if any(k in t for k in CLASS_KEYWORDS["manager"]):
+    if any(k in t for k in MANAGER_KEYWORDS):
         return "manager"
     return "reject"
 
-# -------------------------------------------------------
-# JOB SCORING
-# -------------------------------------------------------
-def compute_job_score(job):
-    text = f"{job['title']} {job['description']}"
-    skill_score, hits = skill_match_score(text)
-    salary_lpa = parse_salary_to_lpa(job.get("salary_text"))
-    sal_score = min(100, int((salary_lpa / 30) * 100))
-    final = int(skill_score * 0.4 + sal_score * 0.6)
-    return final, skill_score, salary_lpa, hits
 
 # -------------------------------------------------------
-# RAPIDAPI FETCH
+# SCORING (INTENTIONALLY SIMPLE)
+# -------------------------------------------------------
+KEY_SKILLS = [
+    "forecasting",
+    "planning",
+    "kpi",
+    "performance",
+    "decision",
+    "stakeholder",
+    "automation",
+    "sql",
+    "power bi"
+]
+
+def compute_score(job):
+    text = f"{job['title']} {job['description']}".lower()
+    hits = sum(1 for s in KEY_SKILLS if s in text)
+    skill_score = int((hits / len(KEY_SKILLS)) * 100)
+
+    salary_lpa = parse_salary_to_lpa(job.get("salary_text"))
+    salary_score = min(100, int((salary_lpa / 30) * 100))
+
+    final_score = int(skill_score * 0.5 + salary_score * 0.5)
+    return final_score, salary_lpa
+
+
+# -------------------------------------------------------
+# RAPIDAPI FETCH (RADAR ONLY)
 # -------------------------------------------------------
 def fetch_jobs(query, location_query, pages):
     url = "https://jsearch.p.rapidapi.com/search"
@@ -164,7 +133,6 @@ def fetch_jobs(query, location_query, pages):
     }
 
     r = requests.get(url, headers=headers, params=params)
-
     if r.status_code != 200:
         st.error("RapidAPI call failed")
         return []
@@ -178,24 +146,23 @@ def fetch_jobs(query, location_query, pages):
             "company": j.get("employer_name"),
             "location": j.get("job_city") or j.get("job_country"),
             "salary_text": j.get("job_salary"),
-            "description": j.get("job_description"),
+            "description": j.get("job_description") or "",
             "apply_link": j.get("job_apply_link"),
             "posted_at": j.get("job_posted_at_datetime_utc")
         })
 
     return jobs
 
-# -------------------------------------------------------
-# SIDEBAR — SEARCH CONTROLS
-# -------------------------------------------------------
-st.sidebar.header("Senior Analytics Filters")
 
-q = st.sidebar.text_input(
+# -------------------------------------------------------
+# SIDEBAR — CONTROLS
+# -------------------------------------------------------
+st.sidebar.header("Search Controls")
+
+query = st.sidebar.text_input(
     "Job keyword",
     "analytics manager"
 )
-
-st.sidebar.subheader("Search Relevance")
 
 time_window = st.sidebar.radio(
     "Posted within",
@@ -210,27 +177,25 @@ WINDOW_MAP = {
 }
 max_days = WINDOW_MAP[time_window]
 
-st.sidebar.subheader("Location")
-
 locations = st.sidebar.multiselect(
-    "Select locations",
+    "Locations",
     ["India", "Mumbai", "Bengaluru", "Pune", "Hyderabad", "Chennai", "Remote"],
     default=["India"]
 )
-
 location_query = " OR ".join(locations)
 
 min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
 pages = st.sidebar.slider("Pages", 1, 3, 1)
 
+
 # -------------------------------------------------------
-# FETCH + FILTER
+# FETCH + PROCESS
 # -------------------------------------------------------
 if st.sidebar.button("Fetch Jobs"):
-    jobs = fetch_jobs(q, location_query, pages)
-    filtered = []
+    raw_jobs = fetch_jobs(query, location_query, pages)
+    final_jobs = []
 
-    for job in jobs:
+    for job in raw_jobs:
         age = job_age_days(job.get("posted_at"))
         if age > max_days:
             continue
@@ -239,39 +204,63 @@ if st.sidebar.button("Fetch Jobs"):
         if role == "reject":
             continue
 
-        score, skill, sal, hits = compute_job_score(job)
-
-        if sal > 0 and sal < min_salary:
+        score, salary_lpa = compute_score(job)
+        if salary_lpa > 0 and salary_lpa < min_salary:
             continue
 
-        filtered.append({
-            **job,
-            "score": score,
-            "salary_lpa": sal,
-            "age_days": age
+        verification = verification_status(job.get("apply_link"))
+        action = decide_action(score, verification)
+
+        final_jobs.append({
+            "Title": job["title"],
+            "Company": job["company"],
+            "Location": job["location"],
+            "Posted_Date": job.get("posted_at") or "Unknown",
+            "Verification_Status": verification,
+            "Action": action,
+            "Salary_LPA": salary_lpa,
+            "Score": score,
+            "Apply_Link": job.get("apply_link")
         })
 
-    st.session_state["jobs"] = filtered
-    st.success(f"{len(filtered)} senior analytics roles loaded")
+    st.session_state["jobs"] = final_jobs
+    st.success(f"{len(final_jobs)} senior job leads identified")
+
 
 # -------------------------------------------------------
-# DISPLAY RESULTS
+# DISPLAY
 # -------------------------------------------------------
 jobs = st.session_state.get("jobs", [])
 
 if jobs:
-    df = pd.DataFrame(jobs).sort_values("score", ascending=False)
+    df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
     st.dataframe(
-        df[["title", "company", "location", "age_days", "salary_lpa", "score"]],
+        df[
+            [
+                "Title",
+                "Company",
+                "Location",
+                "Posted_Date",
+                "Verification_Status",
+                "Action",
+                "Salary_LPA",
+                "Score"
+            ]
+        ],
         use_container_width=True
     )
 
-    idx = st.number_input("Select job index", 0, len(jobs) - 1, 0)
-    job = jobs[idx]
+    st.markdown("### Job Details")
+    idx = st.number_input("Select row", 0, len(df) - 1, 0)
+    selected = df.iloc[idx]
 
-    st.markdown(f"## {job['title']} — {job['company']}")
-    st.write(job["description"])
-    st.write("Apply:", job["apply_link"])
+    st.write("**Title:**", selected["Title"])
+    st.write("**Company:**", selected["Company"])
+    st.write("**Location:**", selected["Location"])
+    st.write("**Posted Date (raw):**", selected["Posted_Date"])
+    st.write("**Verification Status:**", selected["Verification_Status"])
+    st.write("**Recommended Action:**", selected["Action"])
+    st.write("**Apply Link:**", selected["Apply_Link"])
 
-st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
+st.caption("JobBot+ — Senior-level radar. Use judgment. Apply selectively.")
