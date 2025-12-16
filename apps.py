@@ -171,23 +171,19 @@ def interview_answers(job_title):
     }
 
 # -------------------------------------------------------
-# RAPIDAPI FETCH (DEBUG-SAFE)
-# -------------------------------------------------------
-def fetch_jobs(query, location, pages):
+def fetch_jobs(query, location_query, pages):
     url = "https://jsearch.p.rapidapi.com/search"
     headers = {
         "X-RapidAPI-Key": st.secrets["rapidapi"]["key"],
         "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
     }
 
-params = {
-    "query": f"{query} {location}",
-    "num_pages": pages
-}
-
+    params = {
+        "query": f"{query} ({location_query})",
+        "num_pages": pages
+    }
 
     r = requests.get(url, headers=headers, params=params)
-
 
     if r.status_code != 200:
         st.error("RapidAPI call failed")
@@ -203,42 +199,12 @@ params = {
             "location": j.get("job_city") or j.get("job_country"),
             "salary_text": j.get("job_salary"),
             "description": j.get("job_description"),
-            "apply_link": j.get("job_apply_link")
+            "apply_link": j.get("job_apply_link"),
+            "posted_at": j.get("job_posted_at_datetime_utc")
         })
 
     return jobs
 
-# -------------------------------------------------------
-# SIDEBAR
-# -------------------------------------------------------
-st.sidebar.header("Senior Analytics Filters")
-
-q = st.sidebar.text_input(
-    "Job keyword",
-    "analytics manager india"
-)
-
-st.sidebar.subheader("Search Relevance")
-
-time_window = st.sidebar.radio(
-    "Posted within",
-    ["Last 24 hours", "Last 3 days", "Last 7 days"],
-    index=2
-)
-
-WINDOW_MAP = {
-    "Last 24 hours": 1,
-    "Last 3 days": 3,
-    "Last 7 days": 7
-}
-
-max_days = WINDOW_MAP[time_window]
-
-
-
-location = st.sidebar.text_input("Location", "India")
-min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
-pages = st.sidebar.slider("Pages", 1, 3, 1)
 
 # -------------------------------------------------------
 # FETCH JOBS
@@ -293,6 +259,7 @@ if jobs:
         st.write(a)
 
 st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
+
 
 
 
