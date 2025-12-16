@@ -9,12 +9,11 @@ import pandas as pd
 from datetime import datetime
 import re
 import uuid
-from twilio.rest import Client as TwilioClient
 
 # -------------------------------------------------------
 # PAGE CONFIG
 # -------------------------------------------------------
-st.set_page_config(page_title="JobBot+ | Manager Mode", layout="wide")
+st.set_page_config(page_title="JobBot+ | Senior Analytics Manager Mode", layout="wide")
 
 # -------------------------------------------------------
 # LOGO + TITLE
@@ -58,9 +57,6 @@ worksheet = google_sheet()
 def uid():
     return uuid.uuid4().hex[:8]
 
-def detect_emails(text):
-    return list(set(re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text or "")))
-
 def parse_salary_to_lpa(text):
     if not text:
         return 0.0
@@ -97,19 +93,21 @@ def skill_match_score(text):
     return score, hits
 
 # -------------------------------------------------------
-# ROLE CLASSIFICATION (MANAGER-ONLY)
+# ROLE CLASSIFICATION (REAL-WORLD SENIOR SAFE)
 # -------------------------------------------------------
 CLASS_KEYWORDS = {
     "manager": [
         "senior analytics manager",
         "analytics manager",
+        "analytics lead",
+        "lead analytics",
+        "business analytics manager",
         "decision analytics",
         "planning",
         "forecasting",
         "capacity planning",
         "performance analytics",
-        "kpi framework",
-        "business analytics manager"
+        "kpi"
     ],
     "reject_ic": [
         "data scientist",
@@ -153,7 +151,7 @@ def generate_resume_snippet(company):
     )
 
 # -------------------------------------------------------
-# INTERVIEW ANSWERS (MANAGER)
+# INTERVIEW ANSWERS
 # -------------------------------------------------------
 def interview_answers(job_title):
     return {
@@ -162,8 +160,8 @@ def interview_answers(job_title):
             "that support leadership decisions in operations-heavy environments.",
 
         "Why hire you":
-            "I bring ownership across forecasting, KPI frameworks, and decision support, "
-            "not isolated model building.",
+            "I bring ownership across forecasting, KPI frameworks, and decision support "
+            "rather than isolated model building.",
 
         "Core strengths":
             "Forecasting, scenario modeling, KPI design, and analytics automation.",
@@ -173,8 +171,7 @@ def interview_answers(job_title):
     }
 
 # -------------------------------------------------------
-# -------------------------------------------------------
-# RAPIDAPI FETCH (DEBUG VERSION)
+# RAPIDAPI FETCH (DEBUG-SAFE)
 # -------------------------------------------------------
 def fetch_jobs(query, location, pages):
     url = "https://jsearch.p.rapidapi.com/search"
@@ -189,7 +186,7 @@ def fetch_jobs(query, location, pages):
 
     r = requests.get(url, headers=headers, params=params)
 
-    # DEBUG OUTPUT
+    # DEBUG OUTPUT (remove later)
     st.write("Status Code:", r.status_code)
     st.write("Raw Response (first 500 chars):", r.text[:500])
 
@@ -197,13 +194,9 @@ def fetch_jobs(query, location, pages):
         st.error("RapidAPI call failed")
         return []
 
-    try:
-        data = r.json().get("data", [])
-    except Exception as e:
-        st.error(f"JSON parse error: {e}")
-        return []
-
+    data = r.json().get("data", [])
     jobs = []
+
     for j in data:
         jobs.append({
             "title": j.get("job_title"),
@@ -216,15 +209,14 @@ def fetch_jobs(query, location, pages):
 
     return jobs
 
-
 # -------------------------------------------------------
 # SIDEBAR
 # -------------------------------------------------------
-st.sidebar.header("Manager-Only Filters")
+st.sidebar.header("Senior Analytics Filters")
 
 q = st.sidebar.text_input(
     "Job keyword",
-    "Senior Analytics Manager OR Analytics Manager OR Decision Analytics"
+    "analytics manager india"
 )
 
 location = st.sidebar.text_input("Location", "India")
@@ -244,8 +236,13 @@ if st.sidebar.button("Fetch Jobs"):
             continue
 
         score, skill, sal, hits = compute_job_score(job)
-        if sal < min_salary:
+
+        # IMPORTANT: keep missing salary jobs
+        if sal > 0 and sal < min_salary:
             continue
+
+        # DEBUG WHY KEPT
+        st.write("KEPT:", job["title"], "| SAL:", sal)
 
         filtered.append({
             **job,
@@ -281,4 +278,3 @@ if jobs:
         st.write(a)
 
 st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
-
