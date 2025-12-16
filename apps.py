@@ -4,10 +4,10 @@ import pandas as pd
 from datetime import datetime, timezone
 from dateutil import parser
 import re
+import urllib.parse
 from PIL import Image
 from io import BytesIO
 import base64
-
 
 # -------------------------------------------------------
 # PAGE CONFIG
@@ -17,6 +17,9 @@ st.set_page_config(
     layout="wide"
 )
 
+# -------------------------------------------------------
+# LOGO + HEADER (CLEAN, NOT LOUD)
+# -------------------------------------------------------
 def load_logo_base64(path="vt_logo.png"):
     try:
         img = Image.open(path)
@@ -39,15 +42,15 @@ if logo_b64:
     )
 
 st.markdown(
-    "<h2 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics/Manager Radar</h2>",
+    "<h2 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Group Manager Radar</h2>",
     unsafe_allow_html=True
 )
 
-
-st.caption("⚠️ Job APIs are unreliable for freshness. This tool is a discovery + decision system.")
+st.caption(
+    "JSearch is used only as a radar. All actions are driven via LinkedIn verification and human judgment."
+)
 
 st.markdown("---")
-
 
 # -------------------------------------------------------
 # UTILITIES
@@ -78,11 +81,9 @@ def job_age_days(posted_at):
 def verification_status(apply_link):
     if not apply_link:
         return "Needs verification"
-
     link = apply_link.lower()
     if "careers" in link or "jobs." in link:
         return "Career page found"
-
     return "Needs verification"
 
 
@@ -94,8 +95,13 @@ def decide_action(score, verification):
     return "Ignore"
 
 
+def linkedin_search_link(title, company):
+    query = f"{title} {company}"
+    encoded = urllib.parse.quote(query)
+    return f"https://www.linkedin.com/jobs/search/?keywords={encoded}"
+
 # -------------------------------------------------------
-# ROLE FILTERING (SENIOR-SAFE)
+# ROLE FILTERING (STRICT, SENIOR-SAFE)
 # -------------------------------------------------------
 REJECT_KEYWORDS = [
     "data scientist",
@@ -111,7 +117,8 @@ MANAGER_KEYWORDS = [
     "analytics lead",
     "decision analytics",
     "performance analytics",
-    "business analytics manager"
+    "business analytics manager",
+    "risk analytics manager"
 ]
 
 def classify_job(text):
@@ -122,9 +129,8 @@ def classify_job(text):
         return "manager"
     return "reject"
 
-
 # -------------------------------------------------------
-# SCORING (INTENTIONALLY SIMPLE)
+# SCORING (RADAR-GRADE, NOT ATS)
 # -------------------------------------------------------
 KEY_SKILLS = [
     "forecasting",
@@ -142,16 +148,13 @@ def compute_score(job):
     text = f"{job['title']} {job['description']}".lower()
     hits = sum(1 for s in KEY_SKILLS if s in text)
     skill_score = int((hits / len(KEY_SKILLS)) * 100)
-
     salary_lpa = parse_salary_to_lpa(job.get("salary_text"))
     salary_score = min(100, int((salary_lpa / 30) * 100))
-
     final_score = int(skill_score * 0.5 + salary_score * 0.5)
     return final_score, salary_lpa
 
-
 # -------------------------------------------------------
-# RAPIDAPI FETCH (RADAR ONLY)
+# JSEARCH FETCH — RADAR ONLY
 # -------------------------------------------------------
 def fetch_jobs(query, location_query, pages):
     url = "https://jsearch.p.rapidapi.com/search"
@@ -159,7 +162,6 @@ def fetch_jobs(query, location_query, pages):
         "X-RapidAPI-Key": st.secrets["rapidapi"]["key"],
         "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
     }
-
     params = {
         "query": f"{query} ({location_query})",
         "num_pages": pages
@@ -167,7 +169,7 @@ def fetch_jobs(query, location_query, pages):
 
     r = requests.get(url, headers=headers, params=params)
     if r.status_code != 200:
-        st.error("RapidAPI call failed")
+        st.error("JSearch call failed")
         return []
 
     data = r.json().get("data", [])
@@ -186,16 +188,12 @@ def fetch_jobs(query, location_query, pages):
 
     return jobs
 
-
 # -------------------------------------------------------
-# SIDEBAR — CONTROLS
+# SIDEBAR — SEARCH CONTROLS
 # -------------------------------------------------------
 st.sidebar.header("Search Controls")
 
-query = st.sidebar.text_input(
-    "Job keyword",
-    "analytics manager"
-)
+query = st.sidebar.text_input("Job keyword", "analytics manager")
 
 time_window = st.sidebar.radio(
     "Posted within",
@@ -220,7 +218,6 @@ location_query = " OR ".join(locations)
 min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
 pages = st.sidebar.slider("Pages", 1, 3, 1)
 
-
 # -------------------------------------------------------
 # FETCH + PROCESS
 # -------------------------------------------------------
@@ -233,8 +230,7 @@ if st.sidebar.button("Fetch Jobs"):
         if age > max_days:
             continue
 
-        role = classify_job(job["title"] + job["description"])
-        if role == "reject":
+        if classify_job(job["title"] + job["description"]) == "reject":
             continue
 
         score, salary_lpa = compute_score(job)
@@ -253,15 +249,15 @@ if st.sidebar.button("Fetch Jobs"):
             "Action": action,
             "Salary_LPA": salary_lpa,
             "Score": score,
-            "Apply_Link": job.get("apply_link")
+            "Apply_Link": job.get("apply_link"),
+            "LinkedIn_Search": linkedin_search_link(job["title"], job["company"])
         })
 
     st.session_state["jobs"] = final_jobs
-    st.success(f"{len(final_jobs)} senior job leads identified")
-
+    st.success(f"{len(final_jobs)} senior analytics leads identified")
 
 # -------------------------------------------------------
-# DISPLAY
+# DISPLAY — DECISION FIRST
 # -------------------------------------------------------
 jobs = st.session_state.get("jobs", [])
 
@@ -278,7 +274,8 @@ if jobs:
                 "Verification_Status",
                 "Action",
                 "Salary_LPA",
-                "Score"
+                "Score",
+                "LinkedIn_Search"
             ]
         ],
         use_container_width=True
@@ -294,8 +291,7 @@ if jobs:
     st.write("**Posted Date (raw):**", selected["Posted_Date"])
     st.write("**Verification Status:**", selected["Verification_Status"])
     st.write("**Recommended Action:**", selected["Action"])
-    st.write("**Apply Link:**", selected["Apply_Link"])
+    st.write("🔗 **LinkedIn Search:**", selected["LinkedIn_Search"])
+    st.write("Apply Link:", selected["Apply_Link"])
 
-st.caption("JobBot+ — Senior-level radar. Use judgment. Apply selectively.")
-
-
+st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
