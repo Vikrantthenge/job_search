@@ -16,11 +16,12 @@ st.set_page_config(
     page_title="JobBot+ | Senior Analytics Radar",
     layout="wide"
 )
+
 if "jobs" not in st.session_state:
     st.session_state["jobs"] = []
 
 # -------------------------------------------------------
-# LOGO + HEADER (CLEAN, NOT LOUD)
+# LOGO + HEADER
 # -------------------------------------------------------
 def load_logo_base64(path="vt_logo.png"):
     try:
@@ -37,19 +38,19 @@ if logo_b64:
     st.markdown(
         f"""
         <div style="text-align:center; margin-bottom:6px;">
-            <img src="data:image/png;base64,{logo_b64}" width="160">
+            <img src="data:image/png;base64,{logo_b64}" width="150">
         </div>
         """,
         unsafe_allow_html=True
     )
 
 st.markdown(
-    "<h2 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Group Manager Radar</h2>",
+    "<h3 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Group Manager Radar</h3>",
     unsafe_allow_html=True
 )
 
 st.caption(
-    "JSearch is used only as a radar. All actions are driven via LinkedIn verification and human judgment."
+    "JSearch is used only as a radar. Verification and action happen via LinkedIn and career pages."
 )
 
 st.markdown("---")
@@ -84,7 +85,7 @@ def verification_status(apply_link):
     if not apply_link:
         return "Needs verification"
     link = apply_link.lower()
-    if "careers" in link or "jobs." in link:
+    if "career" in link or "jobs." in link:
         return "Career page found"
     return "Needs verification"
 
@@ -103,14 +104,10 @@ def linkedin_search_link(title, company):
     return f"https://www.linkedin.com/jobs/search/?keywords={encoded}"
 
 # -------------------------------------------------------
-# ROLE FILTERING (STRICT, SENIOR-SAFE)
+# ROLE FILTERING
 # -------------------------------------------------------
 REJECT_KEYWORDS = [
-    "data scientist",
-    "machine learning",
-    "deep learning",
-    "nlp",
-    "ml engineer"
+    "data scientist", "machine learning", "deep learning", "nlp", "ml engineer"
 ]
 
 MANAGER_KEYWORDS = [
@@ -132,18 +129,11 @@ def classify_job(text):
     return "reject"
 
 # -------------------------------------------------------
-# SCORING (RADAR-GRADE, NOT ATS)
+# SCORING (RADAR GRADE)
 # -------------------------------------------------------
 KEY_SKILLS = [
-    "forecasting",
-    "planning",
-    "kpi",
-    "performance",
-    "decision",
-    "stakeholder",
-    "automation",
-    "sql",
-    "power bi"
+    "forecasting", "planning", "kpi", "performance",
+    "decision", "stakeholder", "automation", "sql", "power bi"
 ]
 
 def compute_score(job):
@@ -156,7 +146,7 @@ def compute_score(job):
     return final_score, salary_lpa
 
 # -------------------------------------------------------
-# JSEARCH FETCH — RADAR ONLY
+# JSEARCH FETCH (RADAR ONLY)
 # -------------------------------------------------------
 def fetch_jobs(query, location_query, pages):
     url = "https://jsearch.p.rapidapi.com/search"
@@ -191,7 +181,7 @@ def fetch_jobs(query, location_query, pages):
     return jobs
 
 # -------------------------------------------------------
-# SIDEBAR — SEARCH CONTROLS
+# SIDEBAR
 # -------------------------------------------------------
 st.sidebar.header("Search Controls")
 
@@ -228,8 +218,7 @@ if st.sidebar.button("Fetch Jobs"):
     final_jobs = []
 
     for job in raw_jobs:
-        age = job_age_days(job.get("posted_at"))
-        if age > max_days:
+        if job_age_days(job.get("posted_at")) > max_days:
             continue
 
         if classify_job(job["title"] + job["description"]) == "reject":
@@ -259,58 +248,23 @@ if st.sidebar.button("Fetch Jobs"):
     st.success(f"{len(final_jobs)} senior analytics leads identified")
 
 # -------------------------------------------------------
-# -------------------------------------------------------
-# DISPLAY — DECISION FIRST
+# DISPLAY
 # -------------------------------------------------------
 jobs = st.session_state.get("jobs", [])
 
 if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
-    expected_cols = [
-        "Title",
-        "Company",
-        "Location",
-        "Posted_Date",
-        "Verification_Status",
-        "Action",
-        "Salary_LPA",
-        "Score",
-        "LinkedIn_Search"
+    display_cols = [
+        "Title", "Company", "Location", "Posted_Date",
+        "Verification_Status", "Action", "Salary_LPA", "Score"
     ]
 
-    available_cols = [c for c in expected_cols if c in df.columns]
-
-    st.dataframe(
-        df[available_cols],
-        use_container_width=True
-    )
+    st.dataframe(df[display_cols], use_container_width=True)
 
     st.markdown("### Job Details")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
     selected = df.iloc[idx]
-
-    st.write("**Title:**", selected.get("Title"))
-    st.write("**Company:**", selected.get("Company"))
-    st.write("**Location:**", selected.get("Location"))
-    st.write("**Posted Date (raw):**", selected.get("Posted_Date"))
-    st.write("**Verification Status:**", selected.get("Verification_Status"))
-    st.write("**Recommended Action:**", selected.get("Action"))
-
-    if selected.get("LinkedIn_Search"):
-        st.markdown(
-            f"[🔍 Open LinkedIn Search]({selected.get("LinkedIn_Search")']})",
-            unsafe_allow_html=True
-        )
-
-    if selected.get("Apply_Link"):
-        st.markdown(
-            f"[🏢 Open Company Career Page]({selected['Apply_Link']})",
-            unsafe_allow_html=True
-        )
-
-
-
 
     st.write("**Title:**", selected["Title"])
     st.write("**Company:**", selected["Company"])
@@ -318,33 +272,13 @@ if jobs:
     st.write("**Posted Date (raw):**", selected["Posted_Date"])
     st.write("**Verification Status:**", selected["Verification_Status"])
     st.write("**Recommended Action:**", selected["Action"])
-st.markdown(
-    f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",
-    unsafe_allow_html=True
-)
 
-if selected.get("LinkedIn_Search"):
-    st.markdown(
-        f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",
-        unsafe_allow_html=True
-    )
+    linkedin_link = selected.get("LinkedIn_Search")
+    if linkedin_link:
+        st.markdown(f"[🔍 Open LinkedIn Search]({linkedin_link})")
 
-if selected.get("Apply_Link"):
-    st.markdown(
-        f"[🏢 Open Company Career Page]({selected['Apply_Link']})",
-        unsafe_allow_html=True
-    )
+    apply_link = selected.get("Apply_Link")
+    if apply_link:
+        st.markdown(f"[🏢 Open Company Career Page]({apply_link})")
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
-
-
-
-
-
-
-
-
-
-
-
-
