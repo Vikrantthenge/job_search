@@ -16,6 +16,8 @@ st.set_page_config(
     page_title="JobBot+ | Senior Analytics Radar",
     layout="wide"
 )
+if "jobs" not in st.session_state:
+    st.session_state["jobs"] = []
 
 # -------------------------------------------------------
 # LOGO + HEADER (CLEAN, NOT LOUD)
@@ -265,19 +267,51 @@ if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
     st.dataframe(
-        df[
-            [
-                "Title",
-                "Company",
-                "Location",
-                "Posted_Date",
-                "Verification_Status",
-                "Action",
-                "Salary_LPA",
-                "Score",
-                "LinkedIn_Search"
-            ]
-        ],
+     if jobs:
+    df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
+
+    expected_cols = [
+        "Title",
+        "Company",
+        "Location",
+        "Posted_Date",
+        "Verification_Status",
+        "Action",
+        "Salary_LPA",
+        "Score",
+        "LinkedIn_Search"
+    ]
+
+    available_cols = [c for c in expected_cols if c in df.columns]
+
+    st.dataframe(
+        df[available_cols],
+        use_container_width=True
+    )
+
+    st.markdown("### Job Details")
+    idx = st.number_input("Select row", 0, len(df) - 1, 0)
+    selected = df.iloc[idx]
+
+    st.write("**Title:**", selected.get("Title"))
+    st.write("**Company:**", selected.get("Company"))
+    st.write("**Location:**", selected.get("Location"))
+    st.write("**Posted Date (raw):**", selected.get("Posted_Date"))
+    st.write("**Verification Status:**", selected.get("Verification_Status"))
+    st.write("**Recommended Action:**", selected.get("Action"))
+
+    if "LinkedIn_Search" in selected:
+        st.markdown(
+            f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",
+            unsafe_allow_html=True
+        )
+
+    if selected.get("Apply_Link"):
+        st.markdown(
+            f"[🏢 Open Company Career Page]({selected['Apply_Link']})",
+            unsafe_allow_html=True
+        )
+,
         use_container_width=True
     )
 
@@ -291,9 +325,13 @@ if jobs:
     st.write("**Posted Date (raw):**", selected["Posted_Date"])
     st.write("**Verification Status:**", selected["Verification_Status"])
     st.write("**Recommended Action:**", selected["Action"])
-    st.markdown(f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",unsafe_allow_html=True
+st.markdown(
+    f"[🔍 Open LinkedIn Search]({selected['LinkedIn_Search']})",
+    unsafe_allow_html=True
 )
+
     st.write("Apply Link:", selected["Apply_Link"])
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
 
