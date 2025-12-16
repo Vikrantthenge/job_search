@@ -186,9 +186,6 @@ def fetch_jobs(query, location, pages):
 
     r = requests.get(url, headers=headers, params=params)
 
-    # DEBUG OUTPUT (remove later)
-    st.write("Status Code:", r.status_code)
-    st.write("Raw Response (first 500 chars):", r.text[:500])
 
     if r.status_code != 200:
         st.error("RapidAPI call failed")
@@ -241,8 +238,6 @@ if st.sidebar.button("Fetch Jobs"):
         if sal > 0 and sal < min_salary:
             continue
 
-        # DEBUG WHY KEPT
-        st.write("KEPT:", job["title"], "| SAL:", sal)
 
         filtered.append({
             **job,
@@ -278,3 +273,4 @@ if jobs:
         st.write(a)
 
 st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
+
