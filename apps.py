@@ -39,13 +39,11 @@ if logo_b64:
     )
 
 st.markdown(
-    "<h2 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Group Manager Radar</h2>",
+    "<h2 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics/Manager Radar</h2>",
     unsafe_allow_html=True
 )
 
-st.caption(
-    "Job APIs are unreliable for freshness. This tool is a discovery and decision system, not an application engine."
-)
+
 st.caption("⚠️ Job APIs are unreliable for freshness. This tool is a discovery + decision system.")
 
 st.markdown("---")
@@ -299,4 +297,5 @@ if jobs:
     st.write("**Apply Link:**", selected["Apply_Link"])
 
 st.caption("JobBot+ — Senior-level radar. Use judgment. Apply selectively.")
+
 
