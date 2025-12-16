@@ -173,7 +173,8 @@ def interview_answers(job_title):
     }
 
 # -------------------------------------------------------
-# RAPIDAPI FETCH
+# -------------------------------------------------------
+# RAPIDAPI FETCH (DEBUG VERSION)
 # -------------------------------------------------------
 def fetch_jobs(query, location, pages):
     url = "https://jsearch.p.rapidapi.com/search"
@@ -181,10 +182,26 @@ def fetch_jobs(query, location, pages):
         "X-RapidAPI-Key": st.secrets["rapidapi"]["key"],
         "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
     }
-    params = {"query": f"{query} in {location}", "num_pages": pages}
+    params = {
+        "query": f"{query} {location}",
+        "num_pages": pages
+    }
 
     r = requests.get(url, headers=headers, params=params)
-    data = r.json().get("data", [])
+
+    # DEBUG OUTPUT
+    st.write("Status Code:", r.status_code)
+    st.write("Raw Response (first 500 chars):", r.text[:500])
+
+    if r.status_code != 200:
+        st.error("RapidAPI call failed")
+        return []
+
+    try:
+        data = r.json().get("data", [])
+    except Exception as e:
+        st.error(f"JSON parse error: {e}")
+        return []
 
     jobs = []
     for j in data:
@@ -196,7 +213,9 @@ def fetch_jobs(query, location, pages):
             "description": j.get("job_description"),
             "apply_link": j.get("job_apply_link")
         })
+
     return jobs
+
 
 # -------------------------------------------------------
 # SIDEBAR
@@ -262,3 +281,4 @@ if jobs:
         st.write(a)
 
 st.caption("JobBot+ v2 — Senior Analytics Manager Mode")
+
