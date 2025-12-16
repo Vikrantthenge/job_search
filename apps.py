@@ -263,8 +263,6 @@ if st.sidebar.button("Fetch Jobs"):
 # -------------------------------------------------------
 jobs = st.session_state.get("jobs", [])
 
-if jobs:
-    df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
     st.dataframe(
      if jobs:
@@ -333,5 +331,6 @@ st.markdown(
     st.write("Apply Link:", selected["Apply_Link"])
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+
 
 
