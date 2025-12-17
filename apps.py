@@ -21,6 +21,36 @@ if "jobs" not in st.session_state:
     st.session_state["jobs"] = []
 
 # -------------------------------------------------------
+# ROLE SEARCH LIBRARY (APPROVED ONLY)
+# -------------------------------------------------------
+ROLE_SEARCH_LIBRARY = {
+    "Senior Analytics Manager": {
+        "naukri": '"Senior Analytics Manager" AND (forecasting OR planning OR KPI)',
+        "linkedin": "Senior Analytics Manager Decision Analytics"
+    },
+    "Analytics Manager – Decision Analytics": {
+        "naukri": '"Analytics Manager" AND "Decision Analytics"',
+        "linkedin": "Analytics Manager Decision Analytics"
+    },
+    "Group Manager – Analytics": {
+        "naukri": '"Group Manager Analytics"',
+        "linkedin": "Group Manager Analytics"
+    },
+    "Decision Analytics Manager": {
+        "naukri": '"Decision Analytics Manager"',
+        "linkedin": "Decision Analytics Manager"
+    },
+    "Risk Analytics Manager": {
+        "naukri": '"Risk Analytics Manager" AND (portfolio OR performance)',
+        "linkedin": "Risk Analytics Manager Portfolio"
+    },
+    "Senior Business Analytics Manager": {
+        "naukri": '"Senior Business Analytics Manager"',
+        "linkedin": "Senior Business Analytics Manager Operations"
+    }
+}
+
+# -------------------------------------------------------
 # LOGO + HEADER
 # -------------------------------------------------------
 def load_logo_base64(path="vt_logo.png"):
@@ -38,7 +68,7 @@ if logo_b64:
     st.markdown(
         f"""
         <div style="text-align:center; margin-bottom:6px;">
-            <img src="data:image/png;base64,{logo_b64}" width="150">
+            <img src="data:image/png;base64,{logo_b64}" width="140">
         </div>
         """,
         unsafe_allow_html=True
@@ -50,7 +80,7 @@ st.markdown(
 )
 
 st.caption(
-    "JSearch is used only as a radar. Verification and action happen via LinkedIn and career pages."
+    "JSearch is used only as a radar. Final decisions are made via LinkedIn and career-page verification."
 )
 
 st.markdown("---")
@@ -98,13 +128,12 @@ def decide_action(score, verification):
     return "Ignore"
 
 
-def linkedin_search_link(title, company):
-    query = f"{title} {company}"
+def linkedin_search_link(query):
     encoded = urllib.parse.quote(query)
     return f"https://www.linkedin.com/jobs/search/?keywords={encoded}"
 
 # -------------------------------------------------------
-# ROLE FILTERING
+# ROLE FILTERING (ANTI-IC)
 # -------------------------------------------------------
 REJECT_KEYWORDS = [
     "data scientist", "machine learning", "deep learning", "nlp", "ml engineer"
@@ -129,7 +158,7 @@ def classify_job(text):
     return "reject"
 
 # -------------------------------------------------------
-# SCORING (RADAR GRADE)
+# SCORING
 # -------------------------------------------------------
 KEY_SKILLS = [
     "forecasting", "planning", "kpi", "performance",
@@ -181,11 +210,23 @@ def fetch_jobs(query, location_query, pages):
     return jobs
 
 # -------------------------------------------------------
-# SIDEBAR
+# SIDEBAR — SEARCH CONTROLS
 # -------------------------------------------------------
-st.sidebar.header("Search Controls")
+st.sidebar.header("Target Role")
 
-query = st.sidebar.text_input("Job keyword", "analytics manager")
+selected_role = st.sidebar.selectbox(
+    "Approved Senior Roles",
+    list(ROLE_SEARCH_LIBRARY.keys())
+)
+
+st.sidebar.markdown("**Naukri Search (copy-paste):**")
+st.sidebar.code(ROLE_SEARCH_LIBRARY[selected_role]["naukri"])
+
+st.sidebar.markdown(
+    f"[🔍 Open LinkedIn Search]({linkedin_search_link(ROLE_SEARCH_LIBRARY[selected_role]['linkedin'])})"
+)
+
+st.sidebar.markdown("---")
 
 time_window = st.sidebar.radio(
     "Posted within",
@@ -193,11 +234,7 @@ time_window = st.sidebar.radio(
     index=2
 )
 
-WINDOW_MAP = {
-    "Last 24 hours": 1,
-    "Last 3 days": 3,
-    "Last 7 days": 7
-}
+WINDOW_MAP = {"Last 24 hours": 1, "Last 3 days": 3, "Last 7 days": 7}
 max_days = WINDOW_MAP[time_window]
 
 locations = st.sidebar.multiselect(
@@ -214,6 +251,7 @@ pages = st.sidebar.slider("Pages", 1, 3, 1)
 # FETCH + PROCESS
 # -------------------------------------------------------
 if st.sidebar.button("Fetch Jobs"):
+    query = ROLE_SEARCH_LIBRARY[selected_role]["linkedin"]
     raw_jobs = fetch_jobs(query, location_query, pages)
     final_jobs = []
 
@@ -240,8 +278,7 @@ if st.sidebar.button("Fetch Jobs"):
             "Action": action,
             "Salary_LPA": salary_lpa,
             "Score": score,
-            "Apply_Link": job.get("apply_link"),
-            "LinkedIn_Search": linkedin_search_link(job["title"], job["company"])
+            "Apply_Link": job.get("apply_link")
         })
 
     st.session_state["jobs"] = final_jobs
@@ -255,12 +292,15 @@ jobs = st.session_state.get("jobs", [])
 if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
-    display_cols = [
-        "Title", "Company", "Location", "Posted_Date",
-        "Verification_Status", "Action", "Salary_LPA", "Score"
-    ]
-
-    st.dataframe(df[display_cols], use_container_width=True)
+    st.dataframe(
+        df[
+            [
+                "Title", "Company", "Location", "Posted_Date",
+                "Verification_Status", "Action", "Salary_LPA", "Score"
+            ]
+        ],
+        use_container_width=True
+    )
 
     st.markdown("### Job Details")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
@@ -273,12 +313,7 @@ if jobs:
     st.write("**Verification Status:**", selected["Verification_Status"])
     st.write("**Recommended Action:**", selected["Action"])
 
-    linkedin_link = selected.get("LinkedIn_Search")
-    if linkedin_link:
-        st.markdown(f"[🔍 Open LinkedIn Search]({linkedin_link})")
-
-    apply_link = selected.get("Apply_Link")
-    if apply_link:
-        st.markdown(f"[🏢 Open Company Career Page]({apply_link})")
+    if selected.get("Apply_Link"):
+        st.markdown(f"[🏢 Open Company Career Page]({selected['Apply_Link']})")
 
 st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
