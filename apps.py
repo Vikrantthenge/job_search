@@ -45,12 +45,12 @@ if logo_b64:
     )
 
 st.markdown(
-    "<h3 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Group Manager Radar</h3>",
+    "<h3 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Decision Radar</h3>",
     unsafe_allow_html=True
 )
 
 st.caption(
-    "JSearch is used only as a radar. Final decisions happen via LinkedIn and career pages."
+    "JSearch is used only as radar. LinkedIn, Naukri, and recruiters are the execution layer."
 )
 
 st.markdown("---")
@@ -86,31 +86,32 @@ def linkedin_search_link(title, company):
     return "https://www.linkedin.com/jobs/search/?keywords=" + urllib.parse.quote(q)
 
 
-def verification_status(link):
-    if not link:
-        return "Needs verification"
-    l = link.lower()
-    if "career" in l or "jobs." in l:
-        return "Career page found"
-    return "Needs verification"
+def naukri_search_link(title, company):
+    q = f"{title} {company}"
+    return "https://www.naukri.com/" + urllib.parse.quote(q) + "-jobs"
+
 
 # -------------------------------------------------------
 # ROLE & NOISE LOGIC
 # -------------------------------------------------------
 REJECT_KEYWORDS = [
     "data scientist", "machine learning", "deep learning",
-    "nlp", "ml engineer", "computer vision"
+    "nlp", "ml engineer", "data engineer", "spark", "airflow"
 ]
 
 MANAGER_KEYWORDS = [
-    "analytics manager", "group manager", "analytics lead",
-    "decision analytics", "performance analytics",
-    "business analytics manager", "risk analytics manager"
+    "analytics manager",
+    "group manager",
+    "analytics lead",
+    "decision analytics",
+    "performance analytics",
+    "business analytics manager",
+    "risk analytics manager"
 ]
 
 NOISE_KEYWORDS = [
-    "python developer", "data engineer", "spark", "airflow",
-    "etl", "mlops", "deep learning"
+    "python developer", "etl", "mlops", "deep learning",
+    "computer vision", "data pipeline"
 ]
 
 def classify_job(text):
@@ -128,29 +129,52 @@ def noise_score(text):
 
 
 def worth_messaging(score, noise):
-    if score >= 75 and noise <= 1:
-        return "Yes"
-    return "No"
+    return "Yes" if score >= 75 and noise <= 1 else "No"
+
 
 # -------------------------------------------------------
 # SCORING
 # -------------------------------------------------------
 KEY_SIGNALS = [
-    "forecasting", "planning", "kpi",
-    "decision", "stakeholder",
-    "performance", "governance"
+    "forecasting",
+    "planning",
+    "kpi",
+    "decision",
+    "stakeholder",
+    "performance",
+    "governance",
+    "portfolio"
 ]
 
 def compute_score(job):
     text = f"{job.get('title','')} {job.get('description','')}".lower()
-    signal_hits = sum(1 for s in KEY_SIGNALS if s in text)
-    skill_score = int((signal_hits / len(KEY_SIGNALS)) * 100)
+    hits = sum(1 for s in KEY_SIGNALS if s in text)
+    skill_score = int((hits / len(KEY_SIGNALS)) * 100)
 
     salary_lpa = parse_salary_to_lpa(job.get("salary_text"))
     salary_score = min(100, int((salary_lpa / 30) * 100))
 
     final = int(skill_score * 0.6 + salary_score * 0.4)
     return final, salary_lpa
+
+
+# -------------------------------------------------------
+# CONTEXTUAL TEXT GENERATORS
+# -------------------------------------------------------
+def why_this_fits():
+    return (
+        "This role aligns with my experience owning forecasting, KPI frameworks, "
+        "and decision analytics for leadership-facing planning and risk management."
+    )
+
+
+def recruiter_dm(title, company):
+    return (
+        f"Hi, I came across the {title} role at {company}. "
+        f"My background is in decision analytics, forecasting, and KPI ownership "
+        f"for leadership planning. Would be glad to connect and explore fit."
+    )
+
 
 # -------------------------------------------------------
 # JSEARCH FETCH (RADAR ONLY)
@@ -186,6 +210,7 @@ def fetch_jobs(query, location_query, pages):
 
     return jobs
 
+
 # -------------------------------------------------------
 # SIDEBAR
 # -------------------------------------------------------
@@ -211,6 +236,7 @@ location_query = " OR ".join(locations)
 
 min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
 pages = st.sidebar.slider("Pages", 1, 3, 1)
+
 
 # -------------------------------------------------------
 # FETCH + PROCESS
@@ -242,12 +268,16 @@ if st.sidebar.button("Fetch Jobs"):
             "Salary_LPA": salary,
             "Noise_Score": noise,
             "Worth_Messaging": worth,
-            "Apply_Link": job.get("apply_link"),
-            "LinkedIn_Search": linkedin_search_link(job.get("title"), job.get("company"))
+            "Why_Fit": why_this_fits(),
+            "Recruiter_DM": recruiter_dm(job.get("title",""), job.get("company","")) if worth == "Yes" else "",
+            "LinkedIn_Search": linkedin_search_link(job.get("title",""), job.get("company","")),
+            "Naukri_Search": naukri_search_link(job.get("title",""), job.get("company","")),
+            "Apply_Link": job.get("apply_link")
         })
 
     st.session_state["jobs"] = final
-    st.success(f"{len(final)} relevant senior analytics leads found")
+    st.success(f"{len(final)} senior analytics leads identified")
+
 
 # -------------------------------------------------------
 # DISPLAY
@@ -257,13 +287,13 @@ jobs = st.session_state.get("jobs", [])
 if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
-    expected = [
+    display_cols = [
         "Title", "Company", "Location", "Posted",
         "Score", "Salary_LPA", "Noise_Score", "Worth_Messaging"
     ]
-    cols = [c for c in expected if c in df.columns]
 
-    st.dataframe(df[cols], use_container_width=True)
+    available = [c for c in display_cols if c in df.columns]
+    st.dataframe(df[available], use_container_width=True)
 
     st.markdown("### Job Details")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
@@ -277,11 +307,27 @@ if jobs:
     st.write("**Noise Score:**", sel.get("Noise_Score"))
     st.write("**Worth Messaging Recruiter:**", sel.get("Worth_Messaging"))
 
-    if sel.get("LinkedIn_Search"):
-        st.markdown(f"[🔍 Open LinkedIn Search]({sel['LinkedIn_Search']})")
+    st.markdown("**Why this role fits you:**")
+    st.info(sel.get("Why_Fit"))
+
+    if sel.get("Recruiter_DM"):
+        st.markdown("**Suggested Recruiter DM:**")
+        st.code(sel.get("Recruiter_DM"))
+
+    st.markdown("### Action Links")
+    st.markdown(f"[🔍 LinkedIn Jobs]({sel.get('LinkedIn_Search')})")
+    st.markdown(f"[🔍 Naukri Jobs]({sel.get('Naukri_Search')})")
 
     if sel.get("Apply_Link"):
-        st.markdown(f"[🏢 Open Company Career Page]({sel['Apply_Link']})")
+        st.markdown(f"[🏢 Company Career Page]({sel.get('Apply_Link')})")
 
-st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+    # Weekly CSV Export
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "⬇️ Download Weekly Tracking CSV",
+        csv,
+        file_name=f"jobbot_weekly_{datetime.now().date()}.csv",
+        mime="text/csv"
+    )
 
+st.caption("JobBot+ — Radar first. Recruiter second. Apply last.")
