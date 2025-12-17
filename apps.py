@@ -82,17 +82,21 @@ def job_age_days(posted_at):
 
 
 def linkedin_search_link(title, company):
+    if not title and not company:
+        return ""
     q = f"{title} {company}"
     return "https://www.linkedin.com/jobs/search/?keywords=" + urllib.parse.quote(q)
 
 
 def naukri_search_link(title, company):
+    if not title and not company:
+        return ""
     q = f"{title} {company}"
     return "https://www.naukri.com/" + urllib.parse.quote(q) + "-jobs"
 
 
 # -------------------------------------------------------
-# ROLE & NOISE LOGIC
+# ROLE + NOISE LOGIC
 # -------------------------------------------------------
 REJECT_KEYWORDS = [
     "data scientist", "machine learning", "deep learning",
@@ -110,8 +114,8 @@ MANAGER_KEYWORDS = [
 ]
 
 NOISE_KEYWORDS = [
-    "python developer", "etl", "mlops", "deep learning",
-    "computer vision", "data pipeline"
+    "python developer", "etl", "mlops",
+    "deep learning", "computer vision"
 ]
 
 def classify_job(text):
@@ -136,14 +140,9 @@ def worth_messaging(score, noise):
 # SCORING
 # -------------------------------------------------------
 KEY_SIGNALS = [
-    "forecasting",
-    "planning",
-    "kpi",
-    "decision",
-    "stakeholder",
-    "performance",
-    "governance",
-    "portfolio"
+    "forecasting", "planning", "kpi",
+    "decision", "stakeholder",
+    "performance", "governance", "portfolio"
 ]
 
 def compute_score(job):
@@ -159,12 +158,12 @@ def compute_score(job):
 
 
 # -------------------------------------------------------
-# CONTEXTUAL TEXT GENERATORS
+# TEXT GENERATORS
 # -------------------------------------------------------
 def why_this_fits():
     return (
         "This role aligns with my experience owning forecasting, KPI frameworks, "
-        "and decision analytics for leadership-facing planning and risk management."
+        "and leadership-facing decision analytics."
     )
 
 
@@ -172,7 +171,7 @@ def recruiter_dm(title, company):
     return (
         f"Hi, I came across the {title} role at {company}. "
         f"My background is in decision analytics, forecasting, and KPI ownership "
-        f"for leadership planning. Would be glad to connect and explore fit."
+        f"for leadership planning. Would be glad to connect."
     )
 
 
@@ -212,7 +211,7 @@ def fetch_jobs(query, location_query, pages):
 
 
 # -------------------------------------------------------
-# SIDEBAR
+# SIDEBAR — SEARCH CONTROLS
 # -------------------------------------------------------
 st.sidebar.header("Search Controls")
 
@@ -236,7 +235,6 @@ location_query = " OR ".join(locations)
 
 min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
 pages = st.sidebar.slider("Pages", 1, 3, 1)
-
 
 # -------------------------------------------------------
 # FETCH + PROCESS
@@ -278,6 +276,28 @@ if st.sidebar.button("Fetch Jobs"):
     st.session_state["jobs"] = final
     st.success(f"{len(final)} senior analytics leads identified")
 
+# -------------------------------------------------------
+# SIDEBAR — ACTION LINKS (TOP RESULT)
+# -------------------------------------------------------
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Action Links")
+
+if st.session_state["jobs"]:
+    top = pd.DataFrame(st.session_state["jobs"]).sort_values("Score", ascending=False).iloc[0]
+
+    if top.get("LinkedIn_Search","").startswith("http"):
+        st.sidebar.markdown(
+            f'<a href="{top["LinkedIn_Search"]}" target="_blank">🔍 LinkedIn Jobs</a>',
+            unsafe_allow_html=True
+        )
+
+    if top.get("Naukri_Search","").startswith("http"):
+        st.sidebar.markdown(
+            f'<a href="{top["Naukri_Search"]}" target="_blank">🔍 Naukri Jobs</a>',
+            unsafe_allow_html=True
+        )
+else:
+    st.sidebar.caption("Fetch jobs to enable links")
 
 # -------------------------------------------------------
 # DISPLAY
@@ -287,13 +307,14 @@ jobs = st.session_state.get("jobs", [])
 if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
-    display_cols = [
-        "Title", "Company", "Location", "Posted",
-        "Score", "Salary_LPA", "Noise_Score", "Worth_Messaging"
-    ]
-
-    available = [c for c in display_cols if c in df.columns]
-    st.dataframe(df[available], use_container_width=True)
+    st.dataframe(
+        df[[
+            "Title", "Company", "Location",
+            "Posted", "Score", "Salary_LPA",
+            "Noise_Score", "Worth_Messaging"
+        ]],
+        use_container_width=True
+    )
 
     st.markdown("### Job Details")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
@@ -315,11 +336,24 @@ if jobs:
         st.code(sel.get("Recruiter_DM"))
 
     st.markdown("### Action Links")
-    st.markdown(f"[🔍 LinkedIn Jobs]({sel.get('LinkedIn_Search')})")
-    st.markdown(f"[🔍 Naukri Jobs]({sel.get('Naukri_Search')})")
 
-    if sel.get("Apply_Link"):
-        st.markdown(f"[🏢 Company Career Page]({sel.get('Apply_Link')})")
+    if sel.get("LinkedIn_Search","").startswith("http"):
+        st.markdown(
+            f'<a href="{sel["LinkedIn_Search"]}" target="_blank">🔍 LinkedIn Jobs</a>',
+            unsafe_allow_html=True
+        )
+
+    if sel.get("Naukri_Search","").startswith("http"):
+        st.markdown(
+            f'<a href="{sel["Naukri_Search"]}" target="_blank">🔍 Naukri Jobs</a>',
+            unsafe_allow_html=True
+        )
+
+    if sel.get("Apply_Link","").startswith("http"):
+        st.markdown(
+            f'<a href="{sel["Apply_Link"]}" target="_blank">🏢 Company Career Page</a>',
+            unsafe_allow_html=True
+        )
 
     # Weekly CSV Export
     csv = df.to_csv(index=False).encode("utf-8")
