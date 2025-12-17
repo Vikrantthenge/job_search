@@ -300,6 +300,7 @@ else:
     st.sidebar.caption("Fetch jobs to enable links")
 
 # -------------------------------------------------------
+## -------------------------------------------------------
 # DISPLAY
 # -------------------------------------------------------
 jobs = st.session_state.get("jobs", [])
@@ -307,38 +308,47 @@ jobs = st.session_state.get("jobs", [])
 if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
-        display_cols = [
-    "Title",
-    "Company",
-    "Location",
-    "Posted",
-    "Score",
-    "Salary_LPA",
-    "Noise_Score",
-    "Worth_Messaging"
-]
+    display_cols = [
+        "Title",
+        "Company",
+        "Location",
+        "Posted",
+        "Score",
+        "Salary_LPA",
+        "Noise_Score",
+        "Worth_Messaging"
+    ]
 
-available_cols = [c for c in display_cols if c in df.columns]
+    available_cols = [c for c in display_cols if c in df.columns]
 
-st.dataframe(
-    df[available_cols],
-    use_container_width=True
-)
+    st.dataframe(
+        df[available_cols],
+        use_container_width=True
+    )
 
     st.markdown("### Job Details")
-    idx = st.number_input("Select row", 0, len(df) - 1, 0)
+
+    idx = st.number_input(
+        "Select row",
+        min_value=0,
+        max_value=len(df) - 1,
+        value=0,
+        step=1
+    )
+
     sel = df.iloc[idx]
 
-    st.write("**Title:**", sel.get("Title"))
-    st.write("**Company:**", sel.get("Company"))
-    st.write("**Location:**", sel.get("Location"))
-    st.write("**Posted:**", sel.get("Posted"))
-    st.write("**Score:**", sel.get("Score"))
-    st.write("**Noise Score:**", sel.get("Noise_Score"))
-    st.write("**Worth Messaging Recruiter:**", sel.get("Worth_Messaging"))
+    st.write("**Title:**", sel.get("Title", "—"))
+    st.write("**Company:**", sel.get("Company", "—"))
+    st.write("**Location:**", sel.get("Location", "—"))
+    st.write("**Posted:**", sel.get("Posted", "—"))
+    st.write("**Score:**", sel.get("Score", "—"))
+    st.write("**Noise Score:**", sel.get("Noise_Score", "—"))
+    st.write("**Worth Messaging Recruiter:**", sel.get("Worth_Messaging", "—"))
 
-    st.markdown("**Why this role fits you:**")
-    st.info(sel.get("Why_Fit"))
+    if sel.get("Why_Fit"):
+        st.markdown("**Why this role fits you:**")
+        st.info(sel.get("Why_Fit"))
 
     if sel.get("Recruiter_DM"):
         st.markdown("**Suggested Recruiter DM:**")
@@ -346,19 +356,19 @@ st.dataframe(
 
     st.markdown("### Action Links")
 
-    if sel.get("LinkedIn_Search","").startswith("http"):
+    if isinstance(sel.get("LinkedIn_Search"), str) and sel["LinkedIn_Search"].startswith("http"):
         st.markdown(
             f'<a href="{sel["LinkedIn_Search"]}" target="_blank">🔍 LinkedIn Jobs</a>',
             unsafe_allow_html=True
         )
 
-    if sel.get("Naukri_Search","").startswith("http"):
+    if isinstance(sel.get("Naukri_Search"), str) and sel["Naukri_Search"].startswith("http"):
         st.markdown(
             f'<a href="{sel["Naukri_Search"]}" target="_blank">🔍 Naukri Jobs</a>',
             unsafe_allow_html=True
         )
 
-    if sel.get("Apply_Link","").startswith("http"):
+    if isinstance(sel.get("Apply_Link"), str) and sel["Apply_Link"].startswith("http"):
         st.markdown(
             f'<a href="{sel["Apply_Link"]}" target="_blank">🏢 Company Career Page</a>',
             unsafe_allow_html=True
@@ -367,11 +377,10 @@ st.dataframe(
     # Weekly CSV Export
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        "⬇️ Download Weekly Tracking CSV",
-        csv,
+        label="⬇️ Download Weekly Tracking CSV",
+        data=csv,
         file_name=f"jobbot_weekly_{datetime.now().date()}.csv",
         mime="text/csv"
     )
 
 st.caption("JobBot+ — Radar first. Recruiter second. Apply last.")
-
