@@ -308,13 +308,23 @@ if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
     st.dataframe(
-        df[[
-            "Title", "Company", "Location",
-            "Posted", "Score", "Salary_LPA",
-            "Noise_Score", "Worth_Messaging"
-        ]],
-        use_container_width=True
-    )
+        display_cols = [
+    "Title",
+    "Company",
+    "Location",
+    "Posted",
+    "Score",
+    "Salary_LPA",
+    "Noise_Score",
+    "Worth_Messaging"
+]
+
+available_cols = [c for c in display_cols if c in df.columns]
+
+st.dataframe(
+    df[available_cols],
+    use_container_width=True
+)
 
     st.markdown("### Job Details")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
@@ -365,3 +375,4 @@ if jobs:
     )
 
 st.caption("JobBot+ — Radar first. Recruiter second. Apply last.")
+
