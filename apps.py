@@ -307,7 +307,6 @@ jobs = st.session_state.get("jobs", [])
 if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
-    st.dataframe(
         display_cols = [
     "Title",
     "Company",
