@@ -265,6 +265,9 @@ if jobs:
         df[available_cols],
         use_container_width=True
     )
+
+    st.write("DEBUG — DataFrame columns:", df.columns.tolist())
+
     st.markdown("### Selected Role")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
     sel = df.iloc[idx]
@@ -280,4 +283,5 @@ if jobs:
         st.code(sel["Recruiter_DM"])
 
 st.caption("JobBot+ — Signal first. Outreach second. Apply last.")
+
 
