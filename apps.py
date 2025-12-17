@@ -21,32 +21,32 @@ if "jobs" not in st.session_state:
     st.session_state["jobs"] = []
 
 # -------------------------------------------------------
-# ROLE SEARCH LIBRARY (APPROVED ONLY)
+# ROLE SEARCH LIBRARY (APPROVED SENIOR ROLES ONLY)
 # -------------------------------------------------------
 ROLE_SEARCH_LIBRARY = {
     "Senior Analytics Manager": {
-        "naukri": '"Senior Analytics Manager" AND (forecasting OR planning OR KPI)',
-        "linkedin": "Senior Analytics Manager Decision Analytics"
+        "linkedin": "Senior Analytics Manager Decision Analytics",
+        "naukri": "Senior Analytics Manager forecasting planning KPI"
     },
     "Analytics Manager – Decision Analytics": {
-        "naukri": '"Analytics Manager" AND "Decision Analytics"',
-        "linkedin": "Analytics Manager Decision Analytics"
+        "linkedin": "Analytics Manager Decision Analytics",
+        "naukri": "Analytics Manager Decision Analytics"
     },
     "Group Manager – Analytics": {
-        "naukri": '"Group Manager Analytics"',
-        "linkedin": "Group Manager Analytics"
+        "linkedin": "Group Manager Analytics",
+        "naukri": "Group Manager Analytics"
     },
     "Decision Analytics Manager": {
-        "naukri": '"Decision Analytics Manager"',
-        "linkedin": "Decision Analytics Manager"
+        "linkedin": "Decision Analytics Manager",
+        "naukri": "Decision Analytics Manager"
     },
     "Risk Analytics Manager": {
-        "naukri": '"Risk Analytics Manager" AND (portfolio OR performance)',
-        "linkedin": "Risk Analytics Manager Portfolio"
+        "linkedin": "Risk Analytics Manager Portfolio",
+        "naukri": "Risk Analytics Manager portfolio performance"
     },
     "Senior Business Analytics Manager": {
-        "naukri": '"Senior Business Analytics Manager"',
-        "linkedin": "Senior Business Analytics Manager Operations"
+        "linkedin": "Senior Business Analytics Manager Operations",
+        "naukri": "Senior Business Analytics Manager Operations"
     }
 }
 
@@ -80,7 +80,7 @@ st.markdown(
 )
 
 st.caption(
-    "JSearch is used only as a radar. Final decisions are made via LinkedIn and career-page verification."
+    "JSearch is used only as a radar. Applications and verification are done via LinkedIn and Naukri."
 )
 
 st.markdown("---")
@@ -132,8 +132,13 @@ def linkedin_search_link(query):
     encoded = urllib.parse.quote(query)
     return f"https://www.linkedin.com/jobs/search/?keywords={encoded}"
 
+
+def naukri_search_link(query):
+    encoded = urllib.parse.quote(query)
+    return f"https://www.naukri.com/jobs-in-india?keyword={encoded}"
+
 # -------------------------------------------------------
-# ROLE FILTERING (ANTI-IC)
+# ROLE FILTERING (ANTI-IC, SENIOR SAFE)
 # -------------------------------------------------------
 REJECT_KEYWORDS = [
     "data scientist", "machine learning", "deep learning", "nlp", "ml engineer"
@@ -158,11 +163,12 @@ def classify_job(text):
     return "reject"
 
 # -------------------------------------------------------
-# SCORING
+# SCORING (RADAR GRADE)
 # -------------------------------------------------------
 KEY_SKILLS = [
-    "forecasting", "planning", "kpi", "performance",
-    "decision", "stakeholder", "automation", "sql", "power bi"
+    "forecasting", "planning", "kpi",
+    "performance", "decision", "stakeholder",
+    "automation", "sql", "power bi"
 ]
 
 def compute_score(job):
@@ -210,7 +216,7 @@ def fetch_jobs(query, location_query, pages):
     return jobs
 
 # -------------------------------------------------------
-# SIDEBAR — SEARCH CONTROLS
+# SIDEBAR — ROLE-DRIVEN SEARCH
 # -------------------------------------------------------
 st.sidebar.header("Target Role")
 
@@ -219,11 +225,19 @@ selected_role = st.sidebar.selectbox(
     list(ROLE_SEARCH_LIBRARY.keys())
 )
 
-st.sidebar.markdown("**Naukri Search (copy-paste):**")
-st.sidebar.code(ROLE_SEARCH_LIBRARY[selected_role]["naukri"])
+linkedin_query = ROLE_SEARCH_LIBRARY[selected_role]["linkedin"]
+naukri_query = ROLE_SEARCH_LIBRARY[selected_role]["naukri"]
 
 st.sidebar.markdown(
-    f"[🔍 Open LinkedIn Search]({linkedin_search_link(ROLE_SEARCH_LIBRARY[selected_role]['linkedin'])})"
+    f"🔗 **Job Portals**"
+)
+
+st.sidebar.markdown(
+    f"🔵 [Open LinkedIn Jobs]({linkedin_search_link(linkedin_query)})"
+)
+
+st.sidebar.markdown(
+    f"🟢 [Open Naukri Jobs]({naukri_search_link(naukri_query)})"
 )
 
 st.sidebar.markdown("---")
@@ -250,9 +264,8 @@ pages = st.sidebar.slider("Pages", 1, 3, 1)
 # -------------------------------------------------------
 # FETCH + PROCESS
 # -------------------------------------------------------
-if st.sidebar.button("Fetch Jobs"):
-    query = ROLE_SEARCH_LIBRARY[selected_role]["linkedin"]
-    raw_jobs = fetch_jobs(query, location_query, pages)
+if st.sidebar.button("Fetch Jobs (Radar)"):
+    raw_jobs = fetch_jobs(linkedin_query, location_query, pages)
     final_jobs = []
 
     for job in raw_jobs:
@@ -316,4 +329,4 @@ if jobs:
     if selected.get("Apply_Link"):
         st.markdown(f"[🏢 Open Company Career Page]({selected['Apply_Link']})")
 
-st.caption("JobBot+ — Radar first. LinkedIn second. Apply last.")
+st.caption("JobBot+ — Radar first. Portals second. Apply selectively.")
