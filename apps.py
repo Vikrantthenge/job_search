@@ -9,9 +9,9 @@ from PIL import Image
 from io import BytesIO
 import base64
 
-# -------------------------------------------------------
+# =======================================================
 # PAGE CONFIG
-# -------------------------------------------------------
+# =======================================================
 st.set_page_config(
     page_title="JobBot+ | Senior Analytics Radar",
     layout="wide"
@@ -20,39 +20,9 @@ st.set_page_config(
 if "jobs" not in st.session_state:
     st.session_state["jobs"] = []
 
-# -------------------------------------------------------
-# ROLE SEARCH LIBRARY (APPROVED SENIOR ROLES ONLY)
-# -------------------------------------------------------
-ROLE_SEARCH_LIBRARY = {
-    "Senior Analytics Manager": {
-        "linkedin": "Senior Analytics Manager Decision Analytics",
-        "naukri": "Senior Analytics Manager forecasting planning KPI"
-    },
-    "Analytics Manager – Decision Analytics": {
-        "linkedin": "Analytics Manager Decision Analytics",
-        "naukri": "Analytics Manager Decision Analytics"
-    },
-    "Group Manager – Analytics": {
-        "linkedin": "Group Manager Analytics",
-        "naukri": "Group Manager Analytics"
-    },
-    "Decision Analytics Manager": {
-        "linkedin": "Decision Analytics Manager",
-        "naukri": "Decision Analytics Manager"
-    },
-    "Risk Analytics Manager": {
-        "linkedin": "Risk Analytics Manager Portfolio",
-        "naukri": "Risk Analytics Manager portfolio performance"
-    },
-    "Senior Business Analytics Manager": {
-        "linkedin": "Senior Business Analytics Manager Operations",
-        "naukri": "Senior Business Analytics Manager Operations"
-    }
-}
-
-# -------------------------------------------------------
+# =======================================================
 # LOGO + HEADER
-# -------------------------------------------------------
+# =======================================================
 def load_logo_base64(path="vt_logo.png"):
     try:
         img = Image.open(path)
@@ -66,28 +36,24 @@ logo_b64 = load_logo_base64()
 
 if logo_b64:
     st.markdown(
-        f"""
-        <div style="text-align:center; margin-bottom:6px;">
-            <img src="data:image/png;base64,{logo_b64}" width="140">
-        </div>
-        """,
+        f"<div style='text-align:center;'><img src='data:image/png;base64,{logo_b64}' width='140'></div>",
         unsafe_allow_html=True
     )
 
 st.markdown(
-    "<h3 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Group Manager Radar</h3>",
+    "<h3 style='text-align:center;'>JobBot+ — Senior Analytics / Decision Radar</h3>",
     unsafe_allow_html=True
 )
 
 st.caption(
-    "JSearch is used only as a radar. Applications and verification are done via LinkedIn and Naukri."
+    "JSearch is used only as a radar. Decisions are driven by relevance, noise filtering, and recruiter judgment."
 )
 
 st.markdown("---")
 
-# -------------------------------------------------------
+# =======================================================
 # UTILITIES
-# -------------------------------------------------------
+# =======================================================
 def parse_salary_to_lpa(text):
     if not text:
         return 0.0
@@ -100,7 +66,6 @@ def parse_salary_to_lpa(text):
         return round(float(m2.group(1)) / 100000, 1)
     return 0.0
 
-
 def job_age_days(posted_at):
     if not posted_at:
         return 999
@@ -110,79 +75,71 @@ def job_age_days(posted_at):
     except:
         return 999
 
+def linkedin_search_link(title, company):
+    q = urllib.parse.quote(f"{title} {company}")
+    return f"https://www.linkedin.com/jobs/search/?keywords={q}"
 
-def verification_status(apply_link):
-    if not apply_link:
-        return "Needs verification"
-    link = apply_link.lower()
-    if "career" in link or "jobs." in link:
-        return "Career page found"
-    return "Needs verification"
-
-
-def decide_action(score, verification):
-    if score >= 80 and verification == "Career page found":
-        return "Apply"
-    if score >= 70:
-        return "Recruiter outreach"
-    return "Ignore"
-
-
-def linkedin_search_link(query):
-    encoded = urllib.parse.quote(query)
-    return f"https://www.linkedin.com/jobs/search/?keywords={encoded}"
-
-
-def naukri_search_link(query):
-    encoded = urllib.parse.quote(query)
-    return f"https://www.naukri.com/jobs-in-india?keyword={encoded}"
-
-# -------------------------------------------------------
-# ROLE FILTERING (ANTI-IC, SENIOR SAFE)
-# -------------------------------------------------------
+# =======================================================
+# NOISE + ROLE FILTERING
+# =======================================================
 REJECT_KEYWORDS = [
-    "data scientist", "machine learning", "deep learning", "nlp", "ml engineer"
+    "data scientist", "machine learning", "deep learning",
+    "nlp", "ml engineer", "data engineer", "ai engineer"
 ]
 
 MANAGER_KEYWORDS = [
-    "analytics manager",
-    "group manager",
-    "analytics lead",
-    "decision analytics",
-    "performance analytics",
-    "business analytics manager",
-    "risk analytics manager"
+    "analytics manager", "group manager", "analytics lead",
+    "decision analytics", "performance analytics",
+    "business analytics manager", "risk analytics manager",
+    "planning manager", "forecasting manager"
 ]
 
-def classify_job(text):
-    t = (text or "").lower()
-    if any(k in t for k in REJECT_KEYWORDS):
-        return "reject"
-    if any(k in t for k in MANAGER_KEYWORDS):
-        return "manager"
-    return "reject"
+def naukri_noise_score(text):
+    t = text.lower()
+    noise_hits = sum(1 for k in REJECT_KEYWORDS if k in t)
+    return min(100, noise_hits * 25)
 
-# -------------------------------------------------------
-# SCORING (RADAR GRADE)
-# -------------------------------------------------------
+def is_manager_role(text):
+    t = text.lower()
+    return any(k in t for k in MANAGER_KEYWORDS)
+
+# =======================================================
+# SCORING (RECRUITER-FIRST)
+# =======================================================
 KEY_SKILLS = [
     "forecasting", "planning", "kpi",
-    "performance", "decision", "stakeholder",
-    "automation", "sql", "power bi"
+    "decision", "stakeholder",
+    "performance", "portfolio"
 ]
 
 def compute_score(job):
     text = f"{job['title']} {job['description']}".lower()
     hits = sum(1 for s in KEY_SKILLS if s in text)
     skill_score = int((hits / len(KEY_SKILLS)) * 100)
+
     salary_lpa = parse_salary_to_lpa(job.get("salary_text"))
     salary_score = min(100, int((salary_lpa / 30) * 100))
-    final_score = int(skill_score * 0.5 + salary_score * 0.5)
-    return final_score, salary_lpa
 
-# -------------------------------------------------------
+    final = int(skill_score * 0.6 + salary_score * 0.4)
+    return final, salary_lpa
+
+def worth_messaging(score, noise):
+    if noise >= 60:
+        return "No"
+    if score >= 70:
+        return "Yes"
+    return "No"
+
+def recruiter_dm(job):
+    return (
+        f"Hi, I lead forecasting and decision analytics in operations-heavy environments. "
+        f"This {job['Title']} role aligns with my experience in planning, KPI ownership, "
+        f"and leadership-facing analytics. Open to a brief discussion?"
+    )
+
+# =======================================================
 # JSEARCH FETCH (RADAR ONLY)
-# -------------------------------------------------------
+# =======================================================
 def fetch_jobs(query, location_query, pages):
     url = "https://jsearch.p.rapidapi.com/search"
     headers = {
@@ -196,7 +153,7 @@ def fetch_jobs(query, location_query, pages):
 
     r = requests.get(url, headers=headers, params=params)
     if r.status_code != 200:
-        st.error("JSearch call failed")
+        st.error("JSearch failed")
         return []
 
     data = r.json().get("data", [])
@@ -204,8 +161,8 @@ def fetch_jobs(query, location_query, pages):
 
     for j in data:
         jobs.append({
-            "title": j.get("job_title"),
-            "company": j.get("employer_name"),
+            "title": j.get("job_title", ""),
+            "company": j.get("employer_name", ""),
             "location": j.get("job_city") or j.get("job_country"),
             "salary_text": j.get("job_salary"),
             "description": j.get("job_description") or "",
@@ -215,32 +172,12 @@ def fetch_jobs(query, location_query, pages):
 
     return jobs
 
-# -------------------------------------------------------
-# SIDEBAR — ROLE-DRIVEN SEARCH
-# -------------------------------------------------------
-st.sidebar.header("Target Role")
+# =======================================================
+# SIDEBAR
+# =======================================================
+st.sidebar.header("Recruiter-First Search")
 
-selected_role = st.sidebar.selectbox(
-    "Approved Senior Roles",
-    list(ROLE_SEARCH_LIBRARY.keys())
-)
-
-linkedin_query = ROLE_SEARCH_LIBRARY[selected_role]["linkedin"]
-naukri_query = ROLE_SEARCH_LIBRARY[selected_role]["naukri"]
-
-st.sidebar.markdown(
-    f"🔗 **Job Portals**"
-)
-
-st.sidebar.markdown(
-    f"🔵 [Open LinkedIn Jobs]({linkedin_search_link(linkedin_query)})"
-)
-
-st.sidebar.markdown(
-    f"🟢 [Open Naukri Jobs]({naukri_search_link(naukri_query)})"
-)
-
-st.sidebar.markdown("---")
+query = st.sidebar.text_input("Role focus", "Senior Analytics Manager")
 
 time_window = st.sidebar.radio(
     "Posted within",
@@ -261,45 +198,51 @@ location_query = " OR ".join(locations)
 min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
 pages = st.sidebar.slider("Pages", 1, 3, 1)
 
-# -------------------------------------------------------
+# =======================================================
 # FETCH + PROCESS
-# -------------------------------------------------------
-if st.sidebar.button("Fetch Jobs (Radar)"):
-    raw_jobs = fetch_jobs(linkedin_query, location_query, pages)
-    final_jobs = []
+# =======================================================
+if st.sidebar.button("Scan Market"):
+    raw = fetch_jobs(query, location_query, pages)
+    final = []
 
-    for job in raw_jobs:
+    for job in raw:
         if job_age_days(job.get("posted_at")) > max_days:
             continue
 
-        if classify_job(job["title"] + job["description"]) == "reject":
+        combined_text = job["title"] + " " + job["description"]
+
+        if not is_manager_role(combined_text):
             continue
 
-        score, salary_lpa = compute_score(job)
-        if salary_lpa > 0 and salary_lpa < min_salary:
+        noise = naukri_noise_score(combined_text)
+        score, salary = compute_score(job)
+
+        if salary > 0 and salary < min_salary:
             continue
 
-        verification = verification_status(job.get("apply_link"))
-        action = decide_action(score, verification)
+        worth = worth_messaging(score, noise)
 
-        final_jobs.append({
+        final.append({
             "Title": job["title"],
             "Company": job["company"],
             "Location": job["location"],
-            "Posted_Date": job.get("posted_at") or "Unknown",
-            "Verification_Status": verification,
-            "Action": action,
-            "Salary_LPA": salary_lpa,
+            "Posted": job.get("posted_at") or "Unknown",
             "Score": score,
-            "Apply_Link": job.get("apply_link")
+            "Noise_Score": noise,
+            "Worth_Messaging": worth,
+            "Salary_LPA": salary,
+            "LinkedIn_Search": linkedin_search_link(job["title"], job["company"]),
+            "Recruiter_DM": recruiter_dm({
+                "Title": job["title"]
+            }) if worth == "Yes" else ""
         })
 
-    st.session_state["jobs"] = final_jobs
-    st.success(f"{len(final_jobs)} senior analytics leads identified")
+    st.session_state["jobs"] = final
+    st.success(f"{len(final)} recruiter-grade roles surfaced")
 
-# -------------------------------------------------------
+# =======================================================
 # DISPLAY
-# -------------------------------------------------------
+# =======================================================
 jobs = st.session_state.get("jobs", [])
 
 if jobs:
@@ -308,25 +251,26 @@ if jobs:
     st.dataframe(
         df[
             [
-                "Title", "Company", "Location", "Posted_Date",
-                "Verification_Status", "Action", "Salary_LPA", "Score"
+                "Title", "Company", "Location",
+                "Posted", "Score", "Noise_Score",
+                "Worth_Messaging", "Salary_LPA"
             ]
         ],
         use_container_width=True
     )
 
-    st.markdown("### Job Details")
+    st.markdown("### Selected Role")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
-    selected = df.iloc[idx]
+    sel = df.iloc[idx]
 
-    st.write("**Title:**", selected["Title"])
-    st.write("**Company:**", selected["Company"])
-    st.write("**Location:**", selected["Location"])
-    st.write("**Posted Date (raw):**", selected["Posted_Date"])
-    st.write("**Verification Status:**", selected["Verification_Status"])
-    st.write("**Recommended Action:**", selected["Action"])
+    st.write("**Title:**", sel["Title"])
+    st.write("**Company:**", sel["Company"])
+    st.write("**Worth Messaging Recruiter:**", sel["Worth_Messaging"])
 
-    if selected.get("Apply_Link"):
-        st.markdown(f"[🏢 Open Company Career Page]({selected['Apply_Link']})")
+    st.markdown(f"[🔍 Open LinkedIn Search]({sel['LinkedIn_Search']})")
 
-st.caption("JobBot+ — Radar first. Portals second. Apply selectively.")
+    if sel["Worth_Messaging"] == "Yes":
+        st.markdown("**Suggested Recruiter DM**")
+        st.code(sel["Recruiter_DM"])
+
+st.caption("JobBot+ — Signal first. Outreach second. Apply last.")
