@@ -248,17 +248,23 @@ jobs = st.session_state.get("jobs", [])
 if jobs:
     df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
 
+    expected_cols = [
+        "Title",
+        "Company",
+        "Location",
+        "Posted",
+        "Score",
+        "Noise_Score",
+        "Worth_Messaging",
+        "Salary_LPA"
+    ]
+
+    available_cols = [c for c in expected_cols if c in df.columns]
+
     st.dataframe(
-        df[
-            [
-                "Title", "Company", "Location",
-                "Posted", "Score", "Noise_Score",
-                "Worth_Messaging", "Salary_LPA"
-            ]
-        ],
+        df[available_cols],
         use_container_width=True
     )
-
     st.markdown("### Selected Role")
     idx = st.number_input("Select row", 0, len(df) - 1, 0)
     sel = df.iloc[idx]
@@ -274,3 +280,4 @@ if jobs:
         st.code(sel["Recruiter_DM"])
 
 st.caption("JobBot+ — Signal first. Outreach second. Apply last.")
+
