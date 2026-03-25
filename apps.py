@@ -220,8 +220,40 @@ min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
 # -------------------------------------------------------
 if st.sidebar.button("Fetch Jobs"):
 
-    raw = fetch_jobs(query, " OR ".join(locations), 1)
     final = []
+
+    raw = fetch_jobs(query, " OR ".join(locations), 1)
+
+    for j in raw:
+
+        if classify_job(j.get("job_title","") + j.get("job_description","")) == "reject":
+            continue
+
+        score, salary = compute_score(j)
+
+        if salary > 0 and salary < min_salary:
+            continue
+
+        final.append({
+            "Title": j.get("job_title"),
+            "Company": j.get("employer_name"),
+            "Location": j.get("job_city"),
+            "Score": score,
+            "Salary_LPA": salary,
+            "Why_Fit": why_this_fits(),
+            "DM": recruiter_dm(j.get("job_title"), j.get("employer_name")),
+            "Apply": j.get("job_apply_link")
+        })
+
+    df = pd.DataFrame(final)
+
+    if not df.empty and "Score" in df.columns:
+        df = df.sort_values("Score", ascending=False)
+        st.session_state["jobs"] = df
+        st.success(f"{len(df)} relevant roles found")
+    else:
+        st.session_state["jobs"] = pd.DataFrame()
+        st.warning("No relevant jobs found. Try adjusting filters.")
 
     for j in raw:
 
