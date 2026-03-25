@@ -8,12 +8,14 @@ import urllib.parse
 from PIL import Image
 from io import BytesIO
 import base64
+import smtplib
+from email.mime.text import MIMEText
 
 # -------------------------------------------------------
 # PAGE CONFIG
 # -------------------------------------------------------
 st.set_page_config(
-    page_title="JobBot+ | Senior Analytics Radar",
+    page_title="JobBot+ | Operations & Performance Roles Radar",
     layout="wide"
 )
 
@@ -21,36 +23,15 @@ if "jobs" not in st.session_state:
     st.session_state["jobs"] = []
 
 # -------------------------------------------------------
-# LOGO + HEADER
+# HEADER
 # -------------------------------------------------------
-def load_logo_base64(path="vt_logo.png"):
-    try:
-        img = Image.open(path)
-        buf = BytesIO()
-        img.save(buf, format="PNG")
-        return base64.b64encode(buf.getvalue()).decode()
-    except:
-        return None
-
-logo_b64 = load_logo_base64()
-
-if logo_b64:
-    st.markdown(
-        f"""
-        <div style="text-align:center; margin-bottom:6px;">
-            <img src="data:image/png;base64,{logo_b64}" width="140">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
 st.markdown(
-    "<h3 style='text-align:center; margin-top:0;'>JobBot+ — Senior Analytics / Decision Radar</h3>",
+    "<h3 style='text-align:center;'>JobBot+ — Operations / Performance / Analytics Radar</h3>",
     unsafe_allow_html=True
 )
 
 st.caption(
-    "JSearch is used only as radar. LinkedIn, Naukri, and recruiters are the execution layer."
+    "Focus: Operations + Analytics + Performance + Workforce Planning roles"
 )
 
 st.markdown("---")
@@ -82,40 +63,37 @@ def job_age_days(posted_at):
 
 
 def linkedin_search_link(title, company):
-    if not title and not company:
-        return ""
-    q = f"{title} {company}"
-    return "https://www.linkedin.com/jobs/search/?keywords=" + urllib.parse.quote(q)
+    return "https://www.linkedin.com/jobs/search/?keywords=" + urllib.parse.quote(f"{title} {company}")
 
 
 def naukri_search_link(title, company):
-    if not title and not company:
-        return ""
-    q = f"{title} {company}"
-    return "https://www.naukri.com/" + urllib.parse.quote(q) + "-jobs"
-
+    return "https://www.naukri.com/" + urllib.parse.quote(f"{title} {company}") + "-jobs"
 
 # -------------------------------------------------------
-# ROLE + NOISE LOGIC
+# ROLE FILTERING
 # -------------------------------------------------------
 REJECT_KEYWORDS = [
-    "data scientist", "machine learning", "deep learning",
-    "nlp", "ml engineer", "data engineer", "spark", "airflow"
+    "ml engineer",
+    "data engineer",
+    "deep learning engineer",
+    "computer vision",
+    "nlp engineer"
 ]
 
 MANAGER_KEYWORDS = [
-    "analytics manager",
-    "group manager",
-    "analytics lead",
-    "decision analytics",
-    "performance analytics",
-    "business analytics manager",
-    "risk analytics manager"
-]
-
-NOISE_KEYWORDS = [
-    "python developer", "etl", "mlops",
-    "deep learning", "computer vision"
+    "operations analytics manager",
+    "operations performance manager",
+    "operational excellence manager",
+    "operations manager analytics",
+    "supply chain analytics",
+    "network operations manager",
+    "control tower",
+    "operations intelligence",
+    "business operations manager",
+    "program manager operations",
+    "operations strategy",
+    "performance manager",
+    "ops analytics",
 ]
 
 def classify_job(text):
@@ -123,26 +101,26 @@ def classify_job(text):
     if any(k in t for k in REJECT_KEYWORDS):
         return "reject"
     if any(k in t for k in MANAGER_KEYWORDS):
-        return "manager"
+        return "accept"
     return "reject"
-
-
-def noise_score(text):
-    t = (text or "").lower()
-    return sum(1 for k in NOISE_KEYWORDS if k in t)
-
-
-def worth_messaging(score, noise):
-    return "Yes" if score >= 75 and noise <= 1 else "No"
-
 
 # -------------------------------------------------------
 # SCORING
 # -------------------------------------------------------
 KEY_SIGNALS = [
-    "forecasting", "planning", "kpi",
-    "decision", "stakeholder",
-    "performance", "governance", "portfolio"
+    "kpi",
+    "performance",
+    "operations",
+    "workforce",
+    "planning",
+    "forecasting",
+    "efficiency",
+    "cost optimization",
+    "process improvement",
+    "control tower",
+    "network",
+    "utilization",
+    "productivity"
 ]
 
 def compute_score(job):
@@ -153,30 +131,54 @@ def compute_score(job):
     salary_lpa = parse_salary_to_lpa(job.get("salary_text"))
     salary_score = min(100, int((salary_lpa / 30) * 100))
 
-    final = int(skill_score * 0.6 + salary_score * 0.4)
+    final = int(skill_score * 0.7 + salary_score * 0.3)
     return final, salary_lpa
 
-
 # -------------------------------------------------------
-# TEXT GENERATORS
+# TEXT OUTPUT
 # -------------------------------------------------------
 def why_this_fits():
     return (
-        "This role aligns with my experience owning forecasting, KPI frameworks, "
-        "and leadership-facing decision analytics."
+        "Strong alignment with experience in improving operational performance through KPI systems, "
+        "workforce planning, and cost optimization in complex operations."
     )
 
 
 def recruiter_dm(title, company):
     return (
         f"Hi, I came across the {title} role at {company}. "
-        f"My background is in decision analytics, forecasting, and KPI ownership "
-        f"for leadership planning. Would be glad to connect."
+        f"I’ve worked on driving operational performance through KPI systems, workforce planning, "
+        f"and identifying cost leakages in large-scale operations. Would be good to connect."
     )
 
+# -------------------------------------------------------
+# EMAIL ALERT (AUTO PIPELINE BASE)
+# -------------------------------------------------------
+def send_email_alert(df):
+    if df.empty:
+        return
+
+    top_jobs = df.head(5)[["Title", "Company", "Score"]]
+
+    body = "\n".join(
+        [f"{row.Title} | {row.Company} | Score: {row.Score}" for _, row in top_jobs.iterrows()]
+    )
+
+    msg = MIMEText(body)
+    msg["Subject"] = "JobBot Alert - Top Roles"
+    msg["From"] = "your_email@gmail.com"
+    msg["To"] = "your_email@gmail.com"
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login("your_email@gmail.com", "your_app_password")
+            server.send_message(msg)
+    except:
+        pass
 
 # -------------------------------------------------------
-# JSEARCH FETCH (RADAR ONLY)
+# FETCH JOBS
 # -------------------------------------------------------
 def fetch_jobs(query, location_query, pages):
     url = "https://jsearch.p.rapidapi.com/search"
@@ -193,194 +195,84 @@ def fetch_jobs(query, location_query, pages):
     if r.status_code != 200:
         return []
 
-    data = r.json().get("data", [])
-    jobs = []
-
-    for j in data:
-        jobs.append({
-            "title": j.get("job_title"),
-            "company": j.get("employer_name"),
-            "location": j.get("job_city") or j.get("job_country"),
-            "salary_text": j.get("job_salary"),
-            "description": j.get("job_description") or "",
-            "apply_link": j.get("job_apply_link"),
-            "posted_at": j.get("job_posted_at_datetime_utc")
-        })
-
-    return jobs
-
+    return r.json().get("data", [])
 
 # -------------------------------------------------------
-# SIDEBAR — SEARCH CONTROLS
+# SIDEBAR
 # -------------------------------------------------------
 st.sidebar.header("Search Controls")
 
-query = st.sidebar.text_input("Job keyword", "analytics manager")
-
-time_window = st.sidebar.radio(
-    "Posted within",
-    ["Last 24 hours", "Last 3 days", "Last 7 days"],
-    index=2
+query = st.sidebar.text_input(
+    "Job keyword",
+    "operations analytics manager OR operations performance manager OR operational excellence manager OR supply chain analytics manager OR network operations manager OR control tower operations"
 )
-
-WINDOW_MAP = {"Last 24 hours": 1, "Last 3 days": 3, "Last 7 days": 7}
-max_days = WINDOW_MAP[time_window]
 
 locations = st.sidebar.multiselect(
     "Locations",
-    ["India", "Mumbai", "Bengaluru", "Pune", "Hyderabad", "Chennai", "Remote"],
+    ["India", "Mumbai", "Bengaluru", "Pune", "Hyderabad", "Remote"],
     default=["India"]
 )
-location_query = " OR ".join(locations)
 
 min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
-pages = st.sidebar.slider("Pages", 1, 3, 1)
 
 # -------------------------------------------------------
-# FETCH + PROCESS
+# FETCH BUTTON
 # -------------------------------------------------------
 if st.sidebar.button("Fetch Jobs"):
-    raw = fetch_jobs(query, location_query, pages)
+
+    raw = fetch_jobs(query, " OR ".join(locations), 1)
     final = []
 
-    for job in raw:
-        if job_age_days(job.get("posted_at")) > max_days:
+    for j in raw:
+
+        if classify_job(j.get("job_title","") + j.get("job_description","")) == "reject":
             continue
 
-        if classify_job(job.get("title","") + job.get("description","")) == "reject":
-            continue
+        score, salary = compute_score(j)
 
-        score, salary = compute_score(job)
         if salary > 0 and salary < min_salary:
             continue
 
-        noise = noise_score(job.get("description"))
-        worth = worth_messaging(score, noise)
-
         final.append({
-            "Title": job.get("title"),
-            "Company": job.get("company"),
-            "Location": job.get("location"),
-            "Posted": job.get("posted_at") or "Unknown",
+            "Title": j.get("job_title"),
+            "Company": j.get("employer_name"),
+            "Location": j.get("job_city"),
             "Score": score,
             "Salary_LPA": salary,
-            "Noise_Score": noise,
-            "Worth_Messaging": worth,
             "Why_Fit": why_this_fits(),
-            "Recruiter_DM": recruiter_dm(job.get("title",""), job.get("company","")) if worth == "Yes" else "",
-            "LinkedIn_Search": linkedin_search_link(job.get("title",""), job.get("company","")),
-            "Naukri_Search": naukri_search_link(job.get("title",""), job.get("company","")),
-            "Apply_Link": job.get("apply_link")
+            "DM": recruiter_dm(j.get("job_title"), j.get("employer_name")),
+            "Apply": j.get("job_apply_link")
         })
 
-    st.session_state["jobs"] = final
-    st.success(f"{len(final)} senior analytics leads identified")
+    df = pd.DataFrame(final).sort_values("Score", ascending=False)
+
+    st.session_state["jobs"] = df
+
+    st.success(f"{len(df)} relevant roles found")
+
+    # 🔥 AUTO EMAIL ALERT
+    send_email_alert(df)
 
 # -------------------------------------------------------
-# SIDEBAR — ACTION LINKS (TOP RESULT)
-# -------------------------------------------------------
-st.sidebar.markdown("---")
-st.sidebar.markdown("### Action Links")
-
-if st.session_state["jobs"]:
-    top = pd.DataFrame(st.session_state["jobs"]).sort_values("Score", ascending=False).iloc[0]
-
-    if top.get("LinkedIn_Search","").startswith("http"):
-        st.sidebar.markdown(
-            f'<a href="{top["LinkedIn_Search"]}" target="_blank">🔍 LinkedIn Jobs</a>',
-            unsafe_allow_html=True
-        )
-
-    if top.get("Naukri_Search","").startswith("http"):
-        st.sidebar.markdown(
-            f'<a href="{top["Naukri_Search"]}" target="_blank">🔍 Naukri Jobs</a>',
-            unsafe_allow_html=True
-        )
-else:
-    st.sidebar.caption("Fetch jobs to enable links")
-
-# -------------------------------------------------------
-## -------------------------------------------------------
 # DISPLAY
 # -------------------------------------------------------
-jobs = st.session_state.get("jobs", [])
+df = st.session_state.get("jobs")
 
-if jobs:
-    df = pd.DataFrame(jobs).sort_values("Score", ascending=False)
+if isinstance(df, pd.DataFrame) and not df.empty:
 
-    display_cols = [
-        "Title",
-        "Company",
-        "Location",
-        "Posted",
-        "Score",
-        "Salary_LPA",
-        "Noise_Score",
-        "Worth_Messaging"
-    ]
+    st.dataframe(df[["Title","Company","Location","Score","Salary_LPA"]])
 
-    available_cols = [c for c in display_cols if c in df.columns]
+    idx = st.number_input("Select job", 0, len(df)-1, 0)
 
-    st.dataframe(
-        df[available_cols],
-        use_container_width=True
-    )
+    row = df.iloc[idx]
 
-    st.markdown("### Job Details")
+    st.write("### Details")
+    st.write(row["Why_Fit"])
+    st.code(row["DM"])
 
-    idx = st.number_input(
-        "Select row",
-        min_value=0,
-        max_value=len(df) - 1,
-        value=0,
-        step=1
-    )
+    if row["Apply"]:
+        st.markdown(f"[Apply Here]({row['Apply']})")
 
-    sel = df.iloc[idx]
-
-    st.write("**Title:**", sel.get("Title", "—"))
-    st.write("**Company:**", sel.get("Company", "—"))
-    st.write("**Location:**", sel.get("Location", "—"))
-    st.write("**Posted:**", sel.get("Posted", "—"))
-    st.write("**Score:**", sel.get("Score", "—"))
-    st.write("**Noise Score:**", sel.get("Noise_Score", "—"))
-    st.write("**Worth Messaging Recruiter:**", sel.get("Worth_Messaging", "—"))
-
-    if sel.get("Why_Fit"):
-        st.markdown("**Why this role fits you:**")
-        st.info(sel.get("Why_Fit"))
-
-    if sel.get("Recruiter_DM"):
-        st.markdown("**Suggested Recruiter DM:**")
-        st.code(sel.get("Recruiter_DM"))
-
-    st.markdown("### Action Links")
-
-    if isinstance(sel.get("LinkedIn_Search"), str) and sel["LinkedIn_Search"].startswith("http"):
-        st.markdown(
-            f'<a href="{sel["LinkedIn_Search"]}" target="_blank">🔍 LinkedIn Jobs</a>',
-            unsafe_allow_html=True
-        )
-
-    if isinstance(sel.get("Naukri_Search"), str) and sel["Naukri_Search"].startswith("http"):
-        st.markdown(
-            f'<a href="{sel["Naukri_Search"]}" target="_blank">🔍 Naukri Jobs</a>',
-            unsafe_allow_html=True
-        )
-
-    if isinstance(sel.get("Apply_Link"), str) and sel["Apply_Link"].startswith("http"):
-        st.markdown(
-            f'<a href="{sel["Apply_Link"]}" target="_blank">🏢 Company Career Page</a>',
-            unsafe_allow_html=True
-        )
-
-    # Weekly CSV Export
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="⬇️ Download Weekly Tracking CSV",
-        data=csv,
-        file_name=f"jobbot_weekly_{datetime.now().date()}.csv",
-        mime="text/csv"
-    )
-
-st.caption("JobBot+ — Radar first. Recruiter second. Apply last.")
+else:
+    st.info("No jobs yet. Click Fetch Jobs.")
+    
