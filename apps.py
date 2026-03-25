@@ -244,8 +244,13 @@ if st.sidebar.button("Fetch Jobs"):
             "Apply": j.get("job_apply_link")
         })
 
-    df = pd.DataFrame(final).sort_values("Score", ascending=False)
+df = pd.DataFrame(final)
 
+if not df.empty and "Score" in df.columns:
+    df = df.sort_values("Score", ascending=False)
+else:
+    st.warning("No relevant jobs found. Try broadening filters.")
+    
     st.session_state["jobs"] = df
 
     st.success(f"{len(df)} relevant roles found")
