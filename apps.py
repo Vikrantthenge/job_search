@@ -5,193 +5,87 @@ from datetime import datetime, timezone
 from dateutil import parser
 import re
 import urllib.parse
-from PIL import Image
-from io import BytesIO
-import base64
-import smtplib
-from email.mime.text import MIMEText
 
 # -------------------------------------------------------
-# PAGE CONFIG
+# CONFIG
 # -------------------------------------------------------
 st.set_page_config(
-    page_title="JobBot+ | Operations & Performance Roles Radar",
+    page_title="JobBot+ | Ops & Performance Radar",
     layout="wide"
 )
 
+# session state
 if "jobs" not in st.session_state:
-    st.session_state["jobs"] = []
+    st.session_state["jobs"] = pd.DataFrame()
 
 # -------------------------------------------------------
 # HEADER
 # -------------------------------------------------------
-st.markdown(
-    "<h3 style='text-align:center;'>JobBot+ — Operations / Performance / Analytics Radar</h3>",
-    unsafe_allow_html=True
-)
-
-st.caption(
-    "Focus: Operations + Analytics + Performance + Workforce Planning roles"
-)
-
-st.markdown("---")
+st.title("JobBot+ — Operations / Performance / Analytics Radar")
+st.caption("Focus: Operations + KPI + Workforce + Efficiency roles")
 
 # -------------------------------------------------------
-# UTILITIES
+# HELPERS
 # -------------------------------------------------------
 def parse_salary_to_lpa(text):
     if not text:
         return 0.0
     s = text.lower().replace(",", "")
-    m = re.search(r"(\d+(\.\d+)?)\s*(lpa|lakh|lakhs)", s)
+    m = re.search(r"(\d+(\.\d+)?)\s*(lpa|lakh)", s)
     if m:
         return float(m.group(1))
-    m2 = re.search(r"₹?\s*(\d{6,})", s)
-    if m2:
-        return round(float(m2.group(1)) / 100000, 1)
     return 0.0
 
 
-def job_age_days(posted_at):
-    if not posted_at:
-        return 999
-    try:
-        posted = parser.parse(posted_at)
-        return (datetime.now(timezone.utc) - posted).days
-    except:
-        return 999
-
-
-def linkedin_search_link(title, company):
-    return "https://www.linkedin.com/jobs/search/?keywords=" + urllib.parse.quote(f"{title} {company}")
-
-
-def naukri_search_link(title, company):
-    return "https://www.naukri.com/" + urllib.parse.quote(f"{title} {company}") + "-jobs"
-
-# -------------------------------------------------------
-# ROLE FILTERING
-# -------------------------------------------------------
-REJECT_KEYWORDS = [
-    "ml engineer",
-    "data engineer",
-    "deep learning engineer",
-    "computer vision",
-    "nlp engineer"
-]
-
-MANAGER_KEYWORDS = [
-    "operations analytics manager",
-    "operations performance manager",
-    "operational excellence manager",
-    "operations manager analytics",
-    "supply chain analytics",
-    "network operations manager",
-    "control tower",
-    "operations intelligence",
-    "business operations manager",
-    "program manager operations",
-    "operations strategy",
-    "performance manager",
-    "ops analytics",
-]
-
 def classify_job(text):
     t = (text or "").lower()
-    if any(k in t for k in REJECT_KEYWORDS):
-        return "reject"
-    if any(k in t for k in MANAGER_KEYWORDS):
-        return "accept"
-    return "reject"
 
-# -------------------------------------------------------
-# SCORING
-# -------------------------------------------------------
-KEY_SIGNALS = [
-    "kpi",
-    "performance",
-    "operations",
-    "workforce",
-    "planning",
-    "forecasting",
-    "efficiency",
-    "cost optimization",
-    "process improvement",
-    "control tower",
-    "network",
-    "utilization",
-    "productivity"
-]
+    reject = ["ml engineer", "data engineer", "deep learning", "nlp"]
+    if any(k in t for k in reject):
+        return False
 
-def compute_score(job):
-    text = f"{job.get('title','')} {job.get('description','')}".lower()
-    hits = sum(1 for s in KEY_SIGNALS if s in text)
-    skill_score = int((hits / len(KEY_SIGNALS)) * 100)
+    target = [
+        "operations",
+        "performance",
+        "analytics",
+        "supply chain",
+        "control tower",
+        "network"
+    ]
 
-    salary_lpa = parse_salary_to_lpa(job.get("salary_text"))
-    salary_score = min(100, int((salary_lpa / 30) * 100))
-
-    final = int(skill_score * 0.7 + salary_score * 0.3)
-    return final, salary_lpa
-
-# -------------------------------------------------------
-# TEXT OUTPUT
-# -------------------------------------------------------
-def why_this_fits():
-    return (
-        "Strong alignment with experience in improving operational performance through KPI systems, "
-        "workforce planning, and cost optimization in complex operations."
-    )
+    return any(k in t for k in target)
 
 
-def recruiter_dm(title, company):
-    return (
-        f"Hi, I came across the {title} role at {company}. "
-        f"I’ve worked on driving operational performance through KPI systems, workforce planning, "
-        f"and identifying cost leakages in large-scale operations. Would be good to connect."
-    )
+def compute_score(text, salary):
+    signals = [
+        "kpi", "performance", "operations",
+        "planning", "forecasting", "efficiency",
+        "cost", "process", "productivity"
+    ]
 
-# -------------------------------------------------------
-# EMAIL ALERT (AUTO PIPELINE BASE)
-# -------------------------------------------------------
-def send_email_alert(df):
-    if df.empty:
-        return
+    hits = sum(1 for s in signals if s in text.lower())
+    skill_score = int((hits / len(signals)) * 100)
 
-    top_jobs = df.head(5)[["Title", "Company", "Score"]]
+    salary_score = min(100, int((salary / 30) * 100))
 
-    body = "\n".join(
-        [f"{row.Title} | {row.Company} | Score: {row.Score}" for _, row in top_jobs.iterrows()]
-    )
+    return int(0.7 * skill_score + 0.3 * salary_score)
 
-    msg = MIMEText(body)
-    msg["Subject"] = "JobBot Alert - Top Roles"
-    msg["From"] = "your_email@gmail.com"
-    msg["To"] = "your_email@gmail.com"
 
-    try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login("your_email@gmail.com", "your_app_password")
-            server.send_message(msg)
-    except:
-        pass
-
-# -------------------------------------------------------
-# FETCH JOBS
-# -------------------------------------------------------
-def fetch_jobs(query, location_query, pages):
+def fetch_jobs(query, location):
     url = "https://jsearch.p.rapidapi.com/search"
+
     headers = {
         "X-RapidAPI-Key": st.secrets["rapidapi"]["key"],
         "X-RapidAPI-Host": "jsearch.p.rapidapi.com"
     }
+
     params = {
-        "query": f"{query} ({location_query})",
-        "num_pages": pages
+        "query": f"{query} in {location}",
+        "num_pages": 1
     }
 
     r = requests.get(url, headers=headers, params=params)
+
     if r.status_code != 200:
         return []
 
@@ -200,116 +94,82 @@ def fetch_jobs(query, location_query, pages):
 # -------------------------------------------------------
 # SIDEBAR
 # -------------------------------------------------------
-st.sidebar.header("Search Controls")
+st.sidebar.header("Controls")
 
 query = st.sidebar.text_input(
-    "Job keyword",
-    "operations analytics manager OR operations performance manager OR operational excellence manager OR supply chain analytics manager OR network operations manager OR control tower operations"
+    "Search",
+    "operations manager OR operations analytics OR performance manager OR supply chain analytics"
 )
 
-locations = st.sidebar.multiselect(
-    "Locations",
-    ["India", "Mumbai", "Bengaluru", "Pune", "Hyderabad", "Remote"],
-    default=["India"]
+location = st.sidebar.selectbox(
+    "Location",
+    ["India", "Mumbai", "Bangalore", "Remote"]
 )
 
-min_salary = st.sidebar.number_input("Min Salary (LPA)", 24.0)
+min_salary = st.sidebar.slider("Min Salary (LPA)", 0, 50, 20)
 
 # -------------------------------------------------------
 # FETCH BUTTON
 # -------------------------------------------------------
 if st.sidebar.button("Fetch Jobs"):
 
-    final = []
+    raw_jobs = fetch_jobs(query, location)
 
-    raw = fetch_jobs(query, " OR ".join(locations), 1)
+    results = []
 
-    for j in raw:
+    for j in raw_jobs:
 
-        if classify_job(j.get("job_title","") + j.get("job_description","")) == "reject":
+        text = f"{j.get('job_title','')} {j.get('job_description','')}"
+
+        if not classify_job(text):
             continue
 
-        score, salary = compute_score(j)
+        salary = parse_salary_to_lpa(j.get("job_salary"))
 
-        if salary > 0 and salary < min_salary:
+        if salary and salary < min_salary:
             continue
 
-        final.append({
+        score = compute_score(text, salary)
+
+        results.append({
             "Title": j.get("job_title"),
             "Company": j.get("employer_name"),
             "Location": j.get("job_city"),
             "Score": score,
-            "Salary_LPA": salary,
-            "Why_Fit": why_this_fits(),
-            "DM": recruiter_dm(j.get("job_title"), j.get("employer_name")),
+            "Salary": salary,
             "Apply": j.get("job_apply_link")
         })
 
-    df = pd.DataFrame(final)
+    df = pd.DataFrame(results)
 
-    if not df.empty and "Score" in df.columns:
+    if not df.empty:
         df = df.sort_values("Score", ascending=False)
         st.session_state["jobs"] = df
-        st.success(f"{len(df)} relevant roles found")
+        st.success(f"{len(df)} jobs found")
     else:
         st.session_state["jobs"] = pd.DataFrame()
-        st.warning("No relevant jobs found. Try adjusting filters.")
-
-    for j in raw:
-
-        if classify_job(j.get("job_title","") + j.get("job_description","")) == "reject":
-            continue
-
-        score, salary = compute_score(j)
-
-        if salary > 0 and salary < min_salary:
-            continue
-
-        final.append({
-            "Title": j.get("job_title"),
-            "Company": j.get("employer_name"),
-            "Location": j.get("job_city"),
-            "Score": score,
-            "Salary_LPA": salary,
-            "Why_Fit": why_this_fits(),
-            "DM": recruiter_dm(j.get("job_title"), j.get("employer_name")),
-            "Apply": j.get("job_apply_link")
-        })
-
-df = pd.DataFrame(final)
-
-if not df.empty and "Score" in df.columns:
-    df = df.sort_values("Score", ascending=False)
-else:
-    st.warning("No relevant jobs found. Try broadening filters.")
-    
-    st.session_state["jobs"] = df
-
-    st.success(f"{len(df)} relevant roles found")
-
-    # 🔥 AUTO EMAIL ALERT
-    send_email_alert(df)
+        st.warning("No jobs found. Try relaxing filters.")
 
 # -------------------------------------------------------
 # DISPLAY
 # -------------------------------------------------------
-df = st.session_state.get("jobs")
+df = st.session_state["jobs"]
 
-if isinstance(df, pd.DataFrame) and not df.empty:
+if not df.empty:
 
-    st.dataframe(df[["Title","Company","Location","Score","Salary_LPA"]])
+    st.dataframe(df, use_container_width=True)
 
     idx = st.number_input("Select job", 0, len(df)-1, 0)
 
     row = df.iloc[idx]
 
-    st.write("### Details")
-    st.write(row["Why_Fit"])
-    st.code(row["DM"])
+    st.markdown("### Job Details")
+    st.write("Title:", row["Title"])
+    st.write("Company:", row["Company"])
+    st.write("Score:", row["Score"])
 
     if row["Apply"]:
         st.markdown(f"[Apply Here]({row['Apply']})")
 
 else:
-    st.info("No jobs yet. Click Fetch Jobs.")
-    
+    st.info("Click 'Fetch Jobs' to begin")
